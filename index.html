@@ -301,9 +301,9 @@ body.is-active::before{opacity:1}
 /* =======================================================================
    CONFIG — replace these three values, then deploy.
    ======================================================================= */
-const SUPABASE_URL  = "https://iwlhawbdvnqledgppeyw.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bGhhd2Jkdm5xbGVkZ3BwZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMDEwMDYsImV4cCI6MjEwMTc3NzAwNn0.KZNdJqlLOkNytaX2e-NfdDakvqYs9zyxlmEbgZdr69Q";
-const VAPID_PUBLIC  = "BM83ph4iJnym10fZCKXkWGmQfg1T4_Ip92T0S80NPrDDkdTRrbiiw0g1KgldkYP9Uoldv_TF1UAWQS2MkZaFmYE";
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON = "YOUR-ANON-KEY";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
 /* ===================================================================== */
 
 const $ = (id) => document.getElementById(id);
@@ -360,7 +360,10 @@ function show(sig, restoredAt) {
   el.fGrade.textContent = sig.grade || "—";
   el.fFrame.textContent = sig.timeframe || "—";
   el.fTrade.textContent = sig.trade_seconds ? Math.round(sig.trade_seconds) + "s" : "—";
-  if (sig.asset) el.asset.textContent = sig.asset;
+  if (sig.asset) {
+    lastAsset = sig.asset;
+    el.asset.textContent = sig.asset;
+  }
 
   el.idle.hidden = true;
   el.live.hidden = false;
@@ -483,7 +486,7 @@ function paintFeed() {
   if (!lastBeat) {
     el.dot.className = "dot";
     el.feedState.textContent = "Connecting";
-  } else if (age < 45) {
+  } else if (age < 30) {
     el.dot.className = "dot live";
     el.feedState.textContent = "Live";
   } else {
@@ -494,18 +497,19 @@ function paintFeed() {
 }
 setInterval(paintFeed, 1000);
 
+let lastAsset = "";
+
 function applyBeat(row) {
   if (!row) return;
   lastBeat = Number(row.beat_at || 0);
 
-  // A pair switch arrives instantly and outranks whatever is on screen. If
-  // the old signal was for a pair we're no longer watching, drop it rather
-  // than let a stale countdown keep running against the wrong asset.
-  if (row.asset) {
-    const prev = el.asset.textContent;
+  if (row.asset && row.asset !== lastAsset) {
+    // The pair changed. Whatever is on screen belongs to the old pair, so
+    // drop it rather than let a countdown keep running against an asset the
+    // tool is no longer watching.
+    lastAsset = row.asset;
     el.asset.textContent = row.asset;
-    if (current && current.asset && current.asset !== row.asset) { forget(); clear(); }
-    else if (prev !== row.asset && !current) el.asset.textContent = row.asset;
+    if (current) { forget(); clear(); }
   }
   paintFeed();
 }
