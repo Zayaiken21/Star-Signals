@@ -139,6 +139,13 @@ body.is-active::before{opacity:1}
   color:var(--dir);
 }
 
+/* the entry instruction is two words, so it needs its own scale to stay
+   on one line at phone widths */
+.call--now{
+  font-size:clamp(34px,11.5vw,72px);
+  white-space:nowrap;
+}
+
 .clock{
   font-family:var(--mono);
   font-weight:600;
@@ -273,7 +280,7 @@ body.is-active::before{opacity:1}
     <div id="live" hidden>
       <p class="eyebrow" id="eyebrow"></p>
       <p class="call" id="call"></p>
-      <p class="clock"><span id="clockNum">0</span><span class="clock__unit">s</span></p>
+      <p class="clock"><span id="clockNum">0</span><span class="clock__unit" id="clockUnit">s</span></p>
       <p class="reason" id="reason"></p>
     </div>
 
@@ -294,9 +301,9 @@ body.is-active::before{opacity:1}
 /* =======================================================================
    CONFIG — replace these three values, then deploy.
    ======================================================================= */
-const SUPABASE_URL  = "https://iwlhawbdvnqledgppeyw.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bGhhd2Jkdm5xbGVkZ3BwZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMDEwMDYsImV4cCI6MjEwMTc3NzAwNn0.KZNdJqlLOkNytaX2e-NfdDakvqYs9zyxlmEbgZdr69Q";
-const VAPID_PUBLIC  = "BM83ph4iJnym10fZCKXkWGmQfg1T4_Ip92T0S80NPrDDkdTRrbiiw0g1KgldkYP9Uoldv_TF1UAWQS2MkZaFmYE";
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON = "YOUR-ANON-KEY";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
 /* ===================================================================== */
 
 const $ = (id) => document.getElementById(id);
@@ -305,7 +312,7 @@ const el = {
   stage:$("stage"), idle:$("idle"), live:$("live"), eyebrow:$("eyebrow"),
   call:$("call"), clockNum:$("clockNum"), reason:$("reason"), facts:$("facts"),
   fConf:$("fConf"), fGrade:$("fGrade"), fFrame:$("fFrame"), fTrade:$("fTrade"),
-  enable:$("enable"), hint:$("hint"),
+  enable:$("enable"), hint:$("hint"), clockUnit:$("clockUnit"),
 };
 
 if (SUPABASE_URL.includes("YOUR-PROJECT")) {
@@ -334,9 +341,18 @@ function setPhaseColor(varName) {
   document.documentElement.style.setProperty("--phase", `var(${varName})`);
 }
 
-function show(sig) {
-  current = sig;
+function show(sig, restoredAt) {
   const dir = String(sig.direction || "").toUpperCase();
+
+  // Anchor on arrival. The tool sends how many seconds until entry and how
+  // long the trade runs; absolute broker timestamps are never trusted.
+  const base = restoredAt || now();
+  current = {
+    ...sig,
+    _anchor: base,
+    _entryAt: base + Number(sig.entry_in || 0),
+    _expiresAt: base + Number(sig.entry_in || 0) + Number(sig.trade_seconds || 0),
+  };
 
   el.call.textContent = dir;
   el.reason.textContent = sig.reason || "";
@@ -351,16 +367,47 @@ function show(sig) {
   el.facts.hidden = false;
   document.body.classList.add("is-active");
 
-  // Direction colour is fixed for the life of the signal — a trader should
-  // never have to read the word to know which way it points.
   const dirVar = dir === "BUY" ? "--rise" : dir === "SELL" ? "--fall" : "--brand";
   document.documentElement.style.setProperty("--dir", `var(${dirVar})`);
   setPhaseColor("--brand");
+
+  if (!restoredAt) save();
   tick();
+}
+
+/* A reload should not wipe a live signal. This is the user's own device
+   holding its own screen state — nothing leaves the phone, and the entry is
+   dropped the moment the trade finishes. */
+const STORE = "star.signal";
+
+function save() {
+  try {
+    localStorage.setItem(STORE, JSON.stringify({ sig: current, at: current._anchor || now() }));
+  } catch {}
+}
+
+function forget() {
+  try { localStorage.removeItem(STORE); } catch {}
+}
+
+function restore() {
+  let raw;
+  try { raw = localStorage.getItem(STORE); } catch { return; }
+  if (!raw) return;
+  try {
+    const { sig, at } = JSON.parse(raw);
+    if (!sig) return forget();
+    const ends = at + Number(sig.entry_in || 0) + Number(sig.trade_seconds || 0);
+    if (now() >= ends) return forget();   // already finished while away
+    show(sig, at);
+  } catch {
+    forget();
+  }
 }
 
 function clear() {
   current = null;
+  el.clockUnit.hidden = false;
   el.live.hidden = true;
   el.facts.hidden = true;
   el.idle.hidden = false;
@@ -370,43 +417,58 @@ function clear() {
   document.body.classList.remove("is-active");
 }
 
-/* The countdown is the interface. One loop drives colour, copy and meter. */
+/* The countdown is the interface. Three states, in order:
+     ENTER IN 12s   -> waiting for the entry moment
+     SELL NOW  9s   -> the trade is on, this is the expiry clock
+     FINISHED       -> done, then the screen empties itself
+*/
 function tick() {
   if (!current) return;
 
   const t = now();
-  const entry = Number(current.entry_at || 0);
-  const expiry = Number(current.expires_at || 0);
-  const open = Number(current.candle_close || entry);
-
-  let label, remaining, span, elapsed;
+  const entry = current._entryAt;
+  const expiry = current._expiresAt;
+  const dir = String(current.direction || "").toUpperCase();
+  const anchor = current._anchor;
 
   if (t < entry) {
-    label = "Enter in";
-    remaining = entry - t;
-    span = Math.max(entry - open, 1);
-    elapsed = t - open;
+    el.eyebrow.textContent = "Enter in";
+    el.call.textContent = dir;
+    el.call.classList.remove("call--now");
+    el.clockNum.textContent = Math.max(1, Math.ceil(entry - t));
     setPhaseColor("--brand");
-  } else if (t < expiry) {
-    const dir = String(current.direction || "").toUpperCase();
-    label = "Trade live";
-    remaining = expiry - t;
-    span = Math.max(expiry - entry, 1);
-    elapsed = t - entry;
-    setPhaseColor(dir === "BUY" ? "--rise" : dir === "SELL" ? "--fall" : "--brand");
-    void dir;
-  } else {
-    // Expired. Hold it on screen briefly, then return to the idle state.
-    el.eyebrow.textContent = "Expired";
-    el.clockNum.textContent = "0";
-    document.documentElement.style.setProperty("--drain", "100%");
-    setTimeout(() => { if (current && now() >= expiry) clear(); }, 2500);
+    setDrain((t - anchor) / Math.max(entry - anchor, 1));
     return;
   }
 
-  el.eyebrow.textContent = label;
-  el.clockNum.textContent = Math.max(0, Math.ceil(remaining));
-  const pct = Math.min(100, Math.max(0, (elapsed / span) * 100));
+  if (t < expiry) {
+    // Entry moment. The word changes to an instruction, not a label.
+    el.eyebrow.textContent = "Expires in";
+    el.call.textContent = dir + " NOW";
+    el.call.classList.add("call--now");
+    el.clockNum.textContent = Math.max(1, Math.ceil(expiry - t));
+    setPhaseColor(dir === "BUY" ? "--rise" : dir === "SELL" ? "--fall" : "--brand");
+    setDrain((t - entry) / Math.max(expiry - entry, 1));
+    return;
+  }
+
+  // Finished. Say so plainly, hold it long enough to read, then empty out.
+  el.eyebrow.textContent = "Trade finished";
+  el.call.textContent = dir;
+  el.call.classList.remove("call--now");
+  el.clockNum.textContent = "0";
+  setPhaseColor("--brand");
+  setDrain(1);
+  forget();
+
+  if (!current._ending) {
+    current._ending = true;
+    setTimeout(() => { if (current && now() >= current._expiresAt) clear(); }, 4000);
+  }
+}
+
+function setDrain(fraction) {
+  const pct = Math.min(100, Math.max(0, fraction * 100));
   document.documentElement.style.setProperty("--drain", pct.toFixed(1) + "%");
 }
 
@@ -442,7 +504,7 @@ function applyBeat(row) {
   if (row.asset) {
     const prev = el.asset.textContent;
     el.asset.textContent = row.asset;
-    if (current && current.asset && current.asset !== row.asset) clear();
+    if (current && current.asset && current.asset !== row.asset) { forget(); clear(); }
     else if (prev !== row.asset && !current) el.asset.textContent = row.asset;
   }
   paintFeed();
@@ -542,6 +604,7 @@ if ("serviceWorker" in navigator) {
 }
 
 clear();
+restore();
 </script>
 </body>
 </html>

@@ -16,11 +16,9 @@ self.addEventListener("push", (event) => {
   const sig = data.data || {};
   const dir = String(sig.direction || "").toUpperCase();
 
-  // Signals are short-lived. If the phone was offline and this arrives after
-  // the trade window closed, say nothing rather than send someone into a
-  // trade that already expired.
-  const expiry = Number(sig.expires_at || 0);
-  if (expiry && Date.now() / 1000 > expiry) return;
+  // Signals are short-lived, and broker timestamps are in a different clock,
+  // so staleness is judged by the push TTL (25s) set on the server rather
+  // than by comparing timestamps here.
 
   const options = {
     body: data.body || "",
