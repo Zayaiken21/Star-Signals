@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>VAPID keys — Star Trader</title>
+<style>
+  body{background:#0A0812;color:#F2EEFB;font-family:"IBM Plex Mono",ui-monospace,monospace;
+       margin:0;padding:28px 20px 60px;line-height:1.6;font-size:14px}
+  h1{font-size:17px;letter-spacing:.06em;text-transform:uppercase;margin:0 0 6px}
+  p{color:#7A7191;max-width:46ch;margin:0 0 18px;font-size:13px}
+  button{background:#15111F;color:#F2EEFB;border:1px solid #2A2338;padding:15px 20px;
+         font:inherit;letter-spacing:.12em;text-transform:uppercase;font-size:12px;
+         border-radius:2px;cursor:pointer;width:100%;max-width:420px}
+  button:hover{border-color:#C93BE8}
+  .out{margin-top:26px;max-width:560px}
+  .row{margin-bottom:20px}
+  label{display:block;font-size:10px;letter-spacing:.2em;text-transform:uppercase;
+        color:#7A7191;margin-bottom:6px}
+  textarea{width:100%;background:#15111F;color:#34E5A0;border:1px solid #2A2338;
+           border-radius:2px;padding:12px;font:inherit;font-size:12px;
+           word-break:break-all;resize:none;height:76px}
+  .warn{color:#FF3D6E;font-size:12px;max-width:46ch}
+</style>
+</head>
+<body>
+  <h1>Generate VAPID keys</h1>
+  <p>These identify your server to Apple and Google push services. They're made
+     right here in this browser and never sent anywhere.</p>
+
+  <button id="go">Generate keypair</button>
+
+  <div class="out" id="out" hidden>
+    <div class="row">
+      <label>Public key — goes in index.html and the Edge Function</label>
+      <textarea id="pub" readonly></textarea>
+    </div>
+    <div class="row">
+      <label>Private key — Edge Function secret only</label>
+      <textarea id="priv" readonly></textarea>
+    </div>
+    <p class="warn">Never put the private key in index.html or any public repo.
+       Anyone holding it can send notifications to your users.</p>
+  </div>
+
+<script>
+const b64url = (buf) =>
+  btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+document.getElementById("go").addEventListener("click", async () => {
+  const pair = await crypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]
+  );
+  const pub = await crypto.subtle.exportKey("raw", pair.publicKey);
+  const jwk = await crypto.subtle.exportKey("jwk", pair.privateKey);
+
+  document.getElementById("pub").value = b64url(pub);
+  document.getElementById("priv").value = jwk.d;
+  document.getElementById("out").hidden = false;
+});
+</script>
+</body>
+</html>

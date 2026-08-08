@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#0A0812" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Star Signals" />
+<title>Star Trader Signals</title>
+<link rel="manifest" href="./manifest.json" />
+<link rel="apple-touch-icon" href="./icon-180.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+/* ===== CONFIG NOTE ===== fill in the three values in the script below ===== */
+
+:root{
+  --void:#0A0812;
+  --panel:#15111F;
+  --edge:#2A2338;
+  --brand:#C93BE8;
+  --rise:#34E5A0;
+  --fall:#FF3D6E;
+  --dim:#7A7191;
+  --text:#F2EEFB;
+
+  --phase:var(--brand);      /* clock phase: pre-entry vs live */
+  --dir:var(--brand);        /* BUY/SELL, never changes mid-signal */
+  --drain:0%;                /* 0 -> 100 as a countdown empties */
+
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --display:"Bricolage Grotesque",system-ui,sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+
+html,body{height:100%}
+
+body{
+  background:var(--void);
+  color:var(--text);
+  font-family:var(--mono);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* --- ambient wash keyed to the current phase --------------------------- */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--phase) 16%,transparent),transparent 70%);
+  opacity:0;
+  transition:opacity .5s ease, background .5s ease;
+  pointer-events:none;
+}
+body.is-active::before{opacity:1}
+
+/* ===== the signature: a meter that drains as the clock runs ============ */
+.meter{
+  position:relative;
+  height:6px;
+  flex:0 0 auto;
+  background:var(--edge);
+  overflow:hidden;
+}
+.meter__fill{
+  position:absolute;
+  inset:0 var(--drain) 0 0;
+  background:var(--phase);
+  transition:background .35s ease;
+  box-shadow:0 0 18px color-mix(in srgb,var(--phase) 70%,transparent);
+}
+
+/* ===== status strip ==================================================== */
+.strip{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:14px 20px;
+  font-size:11px;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--dim);
+  flex:0 0 auto;
+}
+.dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--dim);
+  flex:0 0 auto;
+  transition:background .3s ease,box-shadow .3s ease;
+}
+.dot.live{
+  background:var(--rise);
+  box-shadow:0 0 0 0 color-mix(in srgb,var(--rise) 60%,transparent);
+  animation:pulse 2.4s ease-out infinite;
+}
+.dot.stale{background:var(--fall)}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rise) 55%,transparent)}
+  100%{box-shadow:0 0 0 9px transparent}
+}
+.strip__asset{color:var(--text);letter-spacing:.1em}
+.strip__spacer{margin-left:auto}
+
+/* ===== main stage ====================================================== */
+.stage{
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:0 20px;
+  text-align:center;
+  min-height:0;
+}
+
+.eyebrow{
+  font-size:11px;
+  letter-spacing:.32em;
+  text-transform:uppercase;
+  color:var(--phase);
+  height:14px;
+  transition:color .35s ease;
+}
+
+.call{
+  font-family:var(--display);
+  font-weight:800;
+  font-size:clamp(52px,17vw,104px);
+  line-height:.92;
+  letter-spacing:-.03em;
+  color:var(--dir);
+}
+
+.clock{
+  font-family:var(--mono);
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  font-size:clamp(64px,24vw,132px);
+  line-height:1;
+  letter-spacing:-.05em;
+  color:var(--text);
+}
+.clock__unit{font-size:.28em;color:var(--dim);letter-spacing:.05em;margin-left:.1em}
+
+.reason{
+  font-size:14px;
+  line-height:1.45;
+  color:var(--text);
+  max-width:30ch;
+  margin-top:10px;
+  opacity:.85;
+}
+
+.idle{
+  font-family:var(--display);
+  font-weight:600;
+  font-size:clamp(22px,6.5vw,32px);
+  line-height:1.25;
+  letter-spacing:-.02em;
+  color:var(--dim);
+  max-width:18ch;
+}
+
+/* ===== data row ======================================================== */
+.facts{
+  display:flex;
+  justify-content:center;
+  flex-wrap:nowrap;
+  gap:0;
+  flex:0 0 auto;
+  padding:0 12px;
+  margin-top:26px;
+}
+.fact{
+  padding:0 clamp(9px,3.2vw,16px);
+  border-left:1px solid var(--edge);
+  flex:0 0 auto;
+}
+.fact:first-child{border-left:0}
+.fact__k{
+  display:block;
+  font-size:9px;
+  letter-spacing:.14em;
+  white-space:nowrap;
+  text-transform:uppercase;
+  color:var(--dim);
+  margin-bottom:3px;
+}
+.fact__v{
+  font-size:15px;
+  white-space:nowrap;
+  font-weight:500;
+  font-variant-numeric:tabular-nums;
+}
+
+/* ===== footer ========================================================== */
+.foot{
+  flex:0 0 auto;
+  padding:14px 20px calc(18px + env(safe-area-inset-bottom));
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.btn{
+  width:100%;
+  border:1px solid var(--edge);
+  background:var(--panel);
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:13px;
+  font-weight:500;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  padding:16px;
+  border-radius:2px;
+  cursor:pointer;
+  transition:border-color .2s ease,background .2s ease,opacity .2s ease;
+}
+.btn:hover{border-color:var(--brand)}
+.btn:active{opacity:.7}
+.btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.btn[hidden]{display:none}
+.btn--on{border-color:color-mix(in srgb,var(--rise) 45%,transparent);color:var(--rise)}
+
+.hint{
+  font-size:11px;
+  line-height:1.55;
+  color:var(--dim);
+  text-align:center;
+  letter-spacing:.02em;
+}
+.hint b{color:var(--text);font-weight:500}
+.hint[hidden]{display:none}
+
+.setup{
+  margin:auto;
+  padding:24px;
+  max-width:34ch;
+  font-size:13px;
+  line-height:1.6;
+  color:var(--dim);
+}
+.setup code{color:var(--brand);font-size:12px}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+
+<body>
+  <div class="meter"><div class="meter__fill" id="meterFill"></div></div>
+
+  <header class="strip">
+    <span class="dot" id="dot"></span>
+    <span id="feedState">Connecting</span>
+    <span class="strip__spacer"></span>
+    <span class="strip__asset" id="asset">—</span>
+  </header>
+
+  <main class="stage" id="stage">
+    <p class="idle" id="idle">Waiting for the next setup.</p>
+
+    <div id="live" hidden>
+      <p class="eyebrow" id="eyebrow"></p>
+      <p class="call" id="call"></p>
+      <p class="clock"><span id="clockNum">0</span><span class="clock__unit">s</span></p>
+      <p class="reason" id="reason"></p>
+    </div>
+
+    <section class="facts" id="facts" hidden>
+    <div class="fact"><span class="fact__k">Confidence</span><span class="fact__v" id="fConf">—</span></div>
+    <div class="fact"><span class="fact__k">Grade</span><span class="fact__v" id="fGrade">—</span></div>
+    <div class="fact"><span class="fact__k">Frame</span><span class="fact__v" id="fFrame">—</span></div>
+      <div class="fact"><span class="fact__k">Trade</span><span class="fact__v" id="fTrade">—</span></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <button class="btn" id="enable">Turn on alerts</button>
+    <p class="hint" id="hint" hidden></p>
+  </footer>
+
+<script type="module">
+/* =======================================================================
+   CONFIG — replace these three values, then deploy.
+   ======================================================================= */
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON = "YOUR-ANON-KEY";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
+/* ===================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const el = {
+  meter:$("meterFill"), dot:$("dot"), feedState:$("feedState"), asset:$("asset"),
+  stage:$("stage"), idle:$("idle"), live:$("live"), eyebrow:$("eyebrow"),
+  call:$("call"), clockNum:$("clockNum"), reason:$("reason"), facts:$("facts"),
+  fConf:$("fConf"), fGrade:$("fGrade"), fFrame:$("fFrame"), fTrade:$("fTrade"),
+  enable:$("enable"), hint:$("hint"),
+};
+
+if (SUPABASE_URL.includes("YOUR-PROJECT")) {
+  document.body.innerHTML =
+    '<div class="setup"><p><b style="color:#F2EEFB">Not configured yet.</b></p>' +
+    '<p style="margin-top:12px">Open <code>index.html</code> and fill in ' +
+    '<code>SUPABASE_URL</code>, <code>SUPABASE_ANON</code> and ' +
+    '<code>VAPID_PUBLIC</code> near the bottom of the file.</p></div>';
+  throw new Error("unconfigured");
+}
+
+const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
+  realtime: { params: { eventsPerSecond: 20 } },
+});
+
+/* ---------------------------------------------------------------------
+   Signal state. Held in memory only — nothing is persisted anywhere.
+   --------------------------------------------------------------------- */
+let current = null;
+let lastBeat = 0;
+
+const now = () => Date.now() / 1000;
+
+function setPhaseColor(varName) {
+  document.documentElement.style.setProperty("--phase", `var(${varName})`);
+}
+
+function show(sig) {
+  current = sig;
+  const dir = String(sig.direction || "").toUpperCase();
+
+  el.call.textContent = dir;
+  el.reason.textContent = sig.reason || "";
+  el.fConf.textContent  = Math.round((sig.confidence || 0) * 100) + "%";
+  el.fGrade.textContent = sig.grade || "—";
+  el.fFrame.textContent = sig.timeframe || "—";
+  el.fTrade.textContent = sig.trade_seconds ? Math.round(sig.trade_seconds) + "s" : "—";
+  if (sig.asset) el.asset.textContent = sig.asset;
+
+  el.idle.hidden = true;
+  el.live.hidden = false;
+  el.facts.hidden = false;
+  document.body.classList.add("is-active");
+
+  // Direction colour is fixed for the life of the signal — a trader should
+  // never have to read the word to know which way it points.
+  const dirVar = dir === "BUY" ? "--rise" : dir === "SELL" ? "--fall" : "--brand";
+  document.documentElement.style.setProperty("--dir", `var(${dirVar})`);
+  setPhaseColor("--brand");
+  tick();
+}
+
+function clear() {
+  current = null;
+  el.live.hidden = true;
+  el.facts.hidden = true;
+  el.idle.hidden = false;
+  // Set on :root only. Setting it on the element itself would shadow the
+  // root value permanently and the meter would never fill again.
+  document.documentElement.style.setProperty("--drain", "100%");
+  document.body.classList.remove("is-active");
+}
+
+/* The countdown is the interface. One loop drives colour, copy and meter. */
+function tick() {
+  if (!current) return;
+
+  const t = now();
+  const entry = Number(current.entry_at || 0);
+  const expiry = Number(current.expires_at || 0);
+  const open = Number(current.candle_close || entry);
+
+  let label, remaining, span, elapsed;
+
+  if (t < entry) {
+    label = "Enter in";
+    remaining = entry - t;
+    span = Math.max(entry - open, 1);
+    elapsed = t - open;
+    setPhaseColor("--brand");
+  } else if (t < expiry) {
+    const dir = String(current.direction || "").toUpperCase();
+    label = "Trade live";
+    remaining = expiry - t;
+    span = Math.max(expiry - entry, 1);
+    elapsed = t - entry;
+    setPhaseColor(dir === "BUY" ? "--rise" : dir === "SELL" ? "--fall" : "--brand");
+    void dir;
+  } else {
+    // Expired. Hold it on screen briefly, then return to the idle state.
+    el.eyebrow.textContent = "Expired";
+    el.clockNum.textContent = "0";
+    document.documentElement.style.setProperty("--drain", "100%");
+    setTimeout(() => { if (current && now() >= expiry) clear(); }, 2500);
+    return;
+  }
+
+  el.eyebrow.textContent = label;
+  el.clockNum.textContent = Math.max(0, Math.ceil(remaining));
+  const pct = Math.min(100, Math.max(0, (elapsed / span) * 100));
+  document.documentElement.style.setProperty("--drain", pct.toFixed(1) + "%");
+}
+
+setInterval(tick, 100);
+
+/* ---------------------------------------------------------------------
+   Live / offline. A user must be able to tell "no setups right now" apart
+   from "the machine died".
+   --------------------------------------------------------------------- */
+function paintFeed() {
+  const age = now() - lastBeat;
+  if (!lastBeat) {
+    el.dot.className = "dot";
+    el.feedState.textContent = "Connecting";
+  } else if (age < 45) {
+    el.dot.className = "dot live";
+    el.feedState.textContent = "Live";
+  } else {
+    el.dot.className = "dot stale";
+    const mins = Math.floor(age / 60);
+    el.feedState.textContent = mins < 1 ? "Feed dropped" : `Offline ${mins}m`;
+  }
+}
+setInterval(paintFeed, 1000);
+
+function applyBeat(row) {
+  if (!row) return;
+  lastBeat = Number(row.beat_at || 0);
+  if (row.asset && !current) el.asset.textContent = row.asset;
+  paintFeed();
+}
+
+sb.from("feed_status").select("*").eq("id", 1).maybeSingle()
+  .then(({ data }) => applyBeat(data))
+  .catch(() => {});
+
+sb.channel("star-trader")
+  .on("broadcast", { event: "signal" }, ({ payload }) => show(payload))
+  .on("broadcast", { event: "heartbeat" }, ({ payload }) => applyBeat(payload))
+  .on("postgres_changes",
+      { event: "*", schema: "public", table: "feed_status" },
+      ({ new: row }) => applyBeat(row))
+  .subscribe();
+
+/* ---------------------------------------------------------------------
+   Notifications
+   --------------------------------------------------------------------- */
+const standalone =
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.navigator.standalone === true;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+function b64ToBytes(base64) {
+  const pad = "=".repeat((4 - (base64.length % 4)) % 4);
+  const raw = atob((base64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+}
+
+async function refreshButton() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    el.enable.hidden = true;
+    el.hint.hidden = false;
+    el.hint.innerHTML = isIOS && !standalone
+      ? 'Tap <b>Share</b>, then <b>Add to Home Screen</b> to get alerts on your lock screen.'
+      : "This browser can't deliver alerts. Signals still appear here while the app is open.";
+    return;
+  }
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+  if (sub) {
+    el.enable.textContent = "Alerts on";
+    el.enable.classList.add("btn--on");
+    el.hint.hidden = false;
+    el.hint.textContent = "Tap to turn alerts off.";
+  } else {
+    el.enable.textContent = "Turn on alerts";
+    el.enable.classList.remove("btn--on");
+    el.hint.hidden = true;
+  }
+}
+
+el.enable.addEventListener("click", async () => {
+  const reg = await navigator.serviceWorker.ready;
+  const existing = await reg.pushManager.getSubscription();
+
+  if (existing) {
+    await sb.from("push_subscriptions").delete().eq("endpoint", existing.endpoint);
+    await existing.unsubscribe();
+    await refreshButton();
+    return;
+  }
+
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") {
+    el.hint.hidden = false;
+    el.hint.textContent = "Alerts are blocked. Turn notifications back on in your device settings.";
+    return;
+  }
+
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: b64ToBytes(VAPID_PUBLIC),
+  });
+  const raw = sub.toJSON();
+
+  const { error } = await sb.from("push_subscriptions").insert({
+    endpoint: raw.endpoint,
+    p256dh: raw.keys.p256dh,
+    auth: raw.keys.auth,
+    label: navigator.userAgent.slice(0, 60),
+  });
+  if (error && error.code !== "23505") {
+    el.hint.hidden = false;
+    el.hint.textContent = "Couldn't register this device. Check your connection and try again.";
+    return;
+  }
+  await refreshButton();
+});
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").then(refreshButton).catch(() => {});
+} else {
+  refreshButton();
+}
+
+clear();
+</script>
+</body>
+</html>
