@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#0A0812" />
+<meta name="theme-color" content="#04060F" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Star Signals" />
@@ -15,28 +15,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 
 <style>
-/* ===== CONFIG NOTE ===== fill in the three values in the script below ===== */
-
 :root{
-  --void:#0A0812;
-  --panel:#15111F;
-  --edge:#2A2338;
+  --void:#04060F;
+  --panel:#0E1424;
+  --edge:#1E2942;
   --brand:#C93BE8;
+  --flame:#2D6BFF;
+  --flame-hot:#8FD4FF;
   --rise:#34E5A0;
   --fall:#FF3D6E;
-  --dim:#7A7191;
-  --text:#F2EEFB;
+  --dim:#6D7A96;
+  --text:#EEF3FF;
 
-  --phase:var(--brand);      /* clock phase: pre-entry vs live */
-  --dir:var(--brand);        /* BUY/SELL, never changes mid-signal */
-  --drain:0%;                /* 0 -> 100 as a countdown empties */
+  --phase:var(--brand);
+  --dir:var(--brand);
+  --drain:100%;
 
   --mono:"IBM Plex Mono",ui-monospace,monospace;
   --display:"Bricolage Grotesque",system-ui,sans-serif;
 }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-
 html,body{height:100%}
 
 body{
@@ -46,298 +45,666 @@ body{
   overflow:hidden;
   display:flex;
   flex-direction:column;
-  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-/* --- ambient wash keyed to the current phase --------------------------- */
-body::before{
-  content:"";
+/* ===== flame canvas: sits behind everything, never intercepts taps ===== */
+#flames{
   position:fixed;
   inset:0;
-  background:radial-gradient(120% 60% at 50% 0%,color-mix(in srgb,var(--phase) 16%,transparent),transparent 70%);
-  opacity:0;
-  transition:opacity .5s ease, background .5s ease;
+  width:100%;
+  height:100%;
+  z-index:0;
   pointer-events:none;
 }
-body.is-active::before{opacity:1}
 
-/* ===== the signature: a meter that drains as the clock runs ============ */
-.meter{
+.shell{
   position:relative;
-  height:6px;
-  flex:0 0 auto;
-  background:var(--edge);
-  overflow:hidden;
+  z-index:1;
+  flex:1 1 auto;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
+
+/* ===== drain meter ===================================================== */
+.meter{position:relative;height:6px;flex:0 0 auto;background:var(--edge);overflow:hidden}
 .meter__fill{
-  position:absolute;
-  inset:0 var(--drain) 0 0;
+  position:absolute;inset:0 var(--drain) 0 0;
   background:var(--phase);
   transition:background .35s ease;
   box-shadow:0 0 18px color-mix(in srgb,var(--phase) 70%,transparent);
 }
+.meter[hidden]{display:none}
 
-/* ===== status strip ==================================================== */
-.strip{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:14px 20px;
-  font-size:11px;
-  letter-spacing:.14em;
-  text-transform:uppercase;
-  color:var(--dim);
-  flex:0 0 auto;
+/* ===== top bar ========================================================= */
+.bar{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;flex:0 0 auto;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
 }
-.dot{
-  width:7px;height:7px;border-radius:50%;
-  background:var(--dim);
-  flex:0 0 auto;
-  transition:background .3s ease,box-shadow .3s ease;
+.burger{
+  width:40px;height:40px;margin:-8px 0 -8px -8px;
+  display:grid;place-items:center;
+  background:none;border:0;cursor:pointer;color:var(--text);
 }
-.dot.live{
-  background:var(--rise);
-  box-shadow:0 0 0 0 color-mix(in srgb,var(--rise) 60%,transparent);
-  animation:pulse 2.4s ease-out infinite;
-}
+.burger span{display:block;width:18px;height:1.5px;background:currentColor;box-shadow:0 5px 0 currentColor,0 -5px 0 currentColor}
+.bar__title{font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:.02em;color:var(--text);text-transform:none}
+.bar__spacer{margin-left:auto}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:0 0 auto;transition:background .3s}
+.dot.live{background:var(--rise);animation:pulse 2.4s ease-out infinite}
 .dot.stale{background:var(--fall)}
 @keyframes pulse{
   0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rise) 55%,transparent)}
   100%{box-shadow:0 0 0 9px transparent}
 }
-.strip__asset{color:var(--text);letter-spacing:.1em}
-.strip__spacer{margin-left:auto}
 
-/* ===== main stage ====================================================== */
+/* ===== nested menu ===================================================== */
+.scrim{
+  position:fixed;inset:0;z-index:20;
+  background:rgba(4,6,15,.72);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .25s ease;
+}
+.scrim.open{opacity:1;pointer-events:auto}
+
+.menu{
+  position:fixed;top:0;bottom:0;left:0;width:min(84vw,320px);z-index:21;
+  background:var(--panel);
+  border-right:1px solid var(--edge);
+  transform:translateX(-102%);
+  transition:transform .28s cubic-bezier(.3,.8,.3,1);
+  display:flex;flex-direction:column;
+  padding:calc(20px + env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
+  overflow-y:auto;
+}
+.menu.open{transform:none}
+.menu__brand{
+  font-family:var(--display);font-weight:800;font-size:19px;
+  padding:0 22px 18px;letter-spacing:-.01em;
+}
+.menu__brand small{display:block;font-family:var(--mono);font-weight:400;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-top:5px}
+
+.nav a,.nav button{
+  display:block;width:100%;text-align:left;
+  background:none;border:0;cursor:pointer;
+  font-family:var(--mono);font-size:14px;color:var(--text);
+  padding:13px 22px;text-decoration:none;
+  border-left:2px solid transparent;
+}
+.nav a:hover,.nav button:hover{background:rgba(255,255,255,.04)}
+.nav a.active{border-left-color:var(--brand);color:var(--brand);background:rgba(201,59,232,.07)}
+.nav__group>button::after{content:"▸";float:right;color:var(--dim);transition:transform .2s}
+.nav__group.open>button::after{transform:rotate(90deg);display:inline-block}
+.nav__sub{max-height:0;overflow:hidden;transition:max-height .28s ease}
+.nav__group.open .nav__sub{max-height:340px}
+.nav__sub a{padding-left:40px;font-size:13px;color:var(--dim)}
+.nav__sub a.active{color:var(--brand)}
+.nav__sep{height:1px;background:var(--edge);margin:12px 22px}
+
+/* ===== pages =========================================================== */
+.page{display:none;flex:1 1 auto;min-height:0;flex-direction:column}
+.page.active{display:flex}
+.scroll{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px calc(28px + env(safe-area-inset-bottom))}
+
+/* ---- home ---- */
+.hero{padding:40px 0 26px;text-align:center}
+.hero h1{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(36px,12vw,60px);line-height:.94;letter-spacing:-.035em;
+}
+.hero h1 em{font-style:normal;color:var(--flame-hot)}
+.hero p{margin-top:14px;font-size:13px;line-height:1.6;color:var(--dim);max-width:30ch;margin-inline:auto}
+
+.card{
+  background:color-mix(in srgb,var(--panel) 88%,transparent);
+  border:1px solid var(--edge);border-radius:3px;
+  padding:18px;margin-bottom:12px;
+}
+.card__k{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.card__v{font-family:var(--display);font-weight:600;font-size:23px;letter-spacing:-.02em}
+.card__note{font-size:12px;color:var(--dim);margin-top:7px;line-height:1.55}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2 .card{margin-bottom:0}
+
+.cta{
+  display:block;width:100%;text-align:center;text-decoration:none;
+  border:1px solid var(--flame);background:color-mix(in srgb,var(--flame) 14%,transparent);
+  color:var(--text);font-family:var(--mono);font-size:13px;font-weight:500;
+  letter-spacing:.12em;text-transform:uppercase;padding:17px;border-radius:3px;
+  margin-top:6px;
+}
+.cta:active{opacity:.75}
+
+.verse{
+  margin-top:22px;padding:18px;border-left:2px solid var(--flame);
+  background:linear-gradient(90deg,color-mix(in srgb,var(--flame) 10%,transparent),transparent);
+  font-size:13px;line-height:1.7;color:var(--text);
+}
+.verse cite{display:block;margin-top:8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--flame-hot);font-style:normal}
+
+/* ---- signals ---- */
 .stage{
-  flex:1 1 auto;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:6px;
-  padding:0 20px;
-  text-align:center;
-  min-height:0;
+  flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;padding:0 20px;text-align:center;min-height:0;
 }
-
-/* Label and clock read as one line: "ENTER IN 12s". The instruction they
-   act on sits underneath it, larger than anything else on screen. */
-.head{
-  display:flex;
-  align-items:baseline;
-  justify-content:center;
-  gap:11px;
-  min-height:50px;
-}
-
-.eyebrow{
-  font-size:11px;
-  letter-spacing:.26em;
-  white-space:nowrap;
-  text-transform:uppercase;
-  color:var(--phase);
-  transition:color .35s ease;
-}
-
-.clock{
-  font-family:var(--mono);
-  font-weight:600;
-  font-variant-numeric:tabular-nums;
-  font-size:clamp(34px,10.5vw,54px);
-  line-height:1;
-  letter-spacing:-.03em;
-  color:var(--text);
-}
-.clock__unit{font-size:.3em;color:var(--dim);letter-spacing:.05em;margin-left:.06em}
-
+.eyebrow{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--phase);height:14px;transition:color .35s}
 .call{
-  font-family:var(--display);
-  font-weight:800;
-  font-size:clamp(58px,19vw,118px);
-  line-height:.92;
-  margin-top:2px;
-  letter-spacing:-.03em;
-  color:var(--dir);
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(52px,17vw,104px);line-height:.92;letter-spacing:-.03em;color:var(--dir);
 }
-
-/* the entry instruction is two words, so it needs its own scale to stay
-   on one line at phone widths */
-.call--now{
-  font-size:clamp(38px,12.5vw,80px);
-  white-space:nowrap;
+.call--now{font-size:clamp(34px,11.5vw,72px);white-space:nowrap}
+.clock{
+  font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;
+  font-size:clamp(64px,24vw,132px);line-height:1;letter-spacing:-.05em;color:var(--text);
 }
-
-
-
-.reason{
-  font-size:14px;
-  line-height:1.45;
-  color:var(--text);
-  max-width:30ch;
-  margin-top:10px;
-  opacity:.85;
-}
-
+.clock__unit{font-size:.28em;color:var(--dim);letter-spacing:.05em;margin-left:.1em}
+.reason{font-size:14px;line-height:1.45;max-width:30ch;margin-top:10px;opacity:.85}
 .idle{
-  font-family:var(--display);
-  font-weight:600;
-  font-size:clamp(22px,6.5vw,32px);
-  line-height:1.25;
-  letter-spacing:-.02em;
-  color:var(--dim);
-  max-width:18ch;
+  font-family:var(--display);font-weight:600;
+  font-size:clamp(22px,6.5vw,32px);line-height:1.25;letter-spacing:-.02em;
+  color:var(--dim);max-width:18ch;
 }
 
-/* ===== data row ======================================================== */
-.facts{
-  display:flex;
-  justify-content:center;
-  flex-wrap:nowrap;
-  gap:0;
-  flex:0 0 auto;
-  padding:0 12px;
-  margin-top:26px;
-}
-.fact{
-  padding:0 clamp(9px,3.2vw,16px);
-  border-left:1px solid var(--edge);
-  flex:0 0 auto;
-}
+.facts{display:flex;justify-content:center;flex-wrap:nowrap;flex:0 0 auto;padding:0 12px;margin-top:26px}
+.fact{padding:0 clamp(9px,3.2vw,16px);border-left:1px solid var(--edge);flex:0 0 auto}
 .fact:first-child{border-left:0}
-/* A class-level display wins over the UA [hidden] rule, so state it here.
-   Without this the data row survives clear() and shows the last trade's
-   numbers under "waiting for the next setup". */
+/* [hidden] is a UA display:none rule, which any author display rule
+   outranks. Without these the data row survives clear() and the last trade's
+   numbers sit under "waiting for the next setup". */
 .facts[hidden]{display:none}
 #live[hidden]{display:none}
-.fact__k{
-  display:block;
-  font-size:9px;
-  letter-spacing:.14em;
-  white-space:nowrap;
-  text-transform:uppercase;
-  color:var(--dim);
-  margin-bottom:3px;
-}
-.fact__v{
-  font-size:15px;
-  white-space:nowrap;
-  font-weight:500;
-  font-variant-numeric:tabular-nums;
-}
+.fact__k{display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:3px;white-space:nowrap}
+.fact__v{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
 
-/* ===== footer ========================================================== */
-.foot{
-  flex:0 0 auto;
-  padding:14px 20px calc(18px + env(safe-area-inset-bottom));
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
+.foot{flex:0 0 auto;padding:14px 20px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px}
 .btn{
-  width:100%;
-  border:1px solid var(--edge);
-  background:var(--panel);
-  color:var(--text);
-  font-family:var(--mono);
-  font-size:13px;
-  font-weight:500;
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  padding:16px;
-  border-radius:2px;
-  cursor:pointer;
-  transition:border-color .2s ease,background .2s ease,opacity .2s ease;
+  width:100%;border:1px solid var(--edge);background:var(--panel);color:var(--text);
+  font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.12em;
+  text-transform:uppercase;padding:16px;border-radius:3px;cursor:pointer;
+  transition:border-color .2s,opacity .2s;
 }
 .btn:hover{border-color:var(--brand)}
 .btn:active{opacity:.7}
-.btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .btn[hidden]{display:none}
 .btn--on{border-color:color-mix(in srgb,var(--rise) 45%,transparent);color:var(--rise)}
-
-.hint{
-  font-size:11px;
-  line-height:1.55;
-  color:var(--dim);
-  text-align:center;
-  letter-spacing:.02em;
-}
+.hint{font-size:11px;line-height:1.55;color:var(--dim);text-align:center}
 .hint b{color:var(--text);font-weight:500}
 .hint[hidden]{display:none}
 
-.setup{
-  margin:auto;
-  padding:24px;
-  max-width:34ch;
-  font-size:13px;
-  line-height:1.6;
-  color:var(--dim);
+/* ---- tools ---- */
+h2.ph{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.025em;padding:26px 0 4px}
+p.pd{font-size:12.5px;color:var(--dim);line-height:1.6;margin-bottom:20px}
+
+label.f{display:block;margin-bottom:14px}
+label.f span{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+input.f{
+  width:100%;background:var(--panel);border:1px solid var(--edge);border-radius:3px;
+  color:var(--text);font-family:var(--mono);font-size:16px;padding:13px;
 }
+input.f:focus{outline:none;border-color:var(--flame)}
+
+.out{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--edge);border:1px solid var(--edge);border-radius:3px;overflow:hidden;margin-top:6px}
+.out div{background:var(--panel);padding:15px}
+.out .k{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.out .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+
+.ses{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--edge)}
+.ses:last-child{border-bottom:0}
+.ses__n{flex:1 1 auto;font-size:14px}
+.ses__t{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pill{font-size:9px;letter-spacing:.16em;text-transform:uppercase;padding:4px 9px;border-radius:2px;border:1px solid var(--edge);color:var(--dim)}
+.pill.on{color:var(--rise);border-color:color-mix(in srgb,var(--rise) 45%,transparent)}
+
+.setup{margin:auto;padding:24px;max-width:34ch;font-size:13px;line-height:1.6;color:var(--dim)}
 .setup code{color:var(--brand);font-size:12px}
 
-@media (prefers-reduced-motion:reduce){
-  *{animation:none!important;transition:none!important}
-}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 
 <body>
-  <div class="meter"><div class="meter__fill" id="meterFill"></div></div>
+<canvas id="flames" aria-hidden="true"></canvas>
 
-  <header class="strip">
-    <span class="dot" id="dot"></span>
-    <span id="feedState">Connecting</span>
-    <span class="strip__spacer"></span>
-    <span class="strip__asset" id="asset">—</span>
-  </header>
+<div class="scrim" id="scrim"></div>
 
-  <main class="stage" id="stage">
-    <p class="idle" id="idle">Waiting for the next setup.</p>
+<nav class="menu" id="menu">
+  <div class="menu__brand">Star Trader<small>Live signal feed</small></div>
+  <div class="nav">
+    <a href="#/home" data-route="home">Home</a>
+    <a href="#/signals" data-route="signals">Signals</a>
 
-    <div id="live" hidden>
-      <div class="head">
-        <span class="eyebrow" id="eyebrow"></span>
-        <span class="clock"><span id="clockNum">0</span><span class="clock__unit" id="clockUnit">s</span></span>
+    <div class="nav__group" id="grpTools">
+      <button type="button">Trading tools</button>
+      <div class="nav__sub">
+        <a href="#/stake" data-route="stake">Stake calculator</a>
+        <a href="#/sessions" data-route="sessions">Session clock</a>
+        <a href="#/streak" data-route="streak">Risk of ruin</a>
       </div>
-      <p class="call" id="call"></p>
-      <p class="reason" id="reason"></p>
     </div>
 
-    <section class="facts" id="facts" hidden>
-    <div class="fact"><span class="fact__k">Confidence</span><span class="fact__v" id="fConf">—</span></div>
-    <div class="fact"><span class="fact__k">Grade</span><span class="fact__v" id="fGrade">—</span></div>
-    <div class="fact"><span class="fact__k">Frame</span><span class="fact__v" id="fFrame">—</span></div>
-      <div class="fact"><span class="fact__k">Trade</span><span class="fact__v" id="fTrade">—</span></div>
-    </section>
-  </main>
+    <div class="nav__sep"></div>
+    <a href="#/alerts" data-route="alerts">Alerts &amp; setup</a>
+  </div>
+</nav>
 
-  <footer class="foot">
-    <button class="btn" id="enable">Turn on alerts</button>
-    <p class="hint" id="hint" hidden></p>
-  </footer>
+<div class="shell">
+  <div class="meter" id="meter"><div class="meter__fill"></div></div>
+
+  <header class="bar">
+    <button class="burger" id="burger" aria-label="Menu"><span></span></button>
+    <span class="dot" id="dot"></span>
+    <span id="feedState">Connecting</span>
+    <span class="bar__spacer"></span>
+    <span id="asset" style="color:var(--text)">—</span>
+  </header>
+
+  <!-- ===================== HOME ===================== -->
+  <section class="page" id="p-home">
+    <div class="scroll">
+      <div class="hero">
+        <h1>Star <em>Trader</em></h1>
+        <p>Signals straight from the desk, the moment they fire.</p>
+      </div>
+
+      <div class="card">
+        <div class="card__k">Feed status</div>
+        <div class="card__v" id="hStatus">Connecting</div>
+        <div class="card__note" id="hNote">Checking in with the desk.</div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card__k">Watching</div>
+          <div class="card__v" id="hAsset" style="font-size:19px">—</div>
+        </div>
+        <div class="card">
+          <div class="card__k">Right now</div>
+          <div class="card__v" id="hSignal" style="font-size:19px">Quiet</div>
+        </div>
+      </div>
+
+      <a class="cta" href="#/signals">Open live signals</a>
+
+      <div class="verse">
+        He will baptise you with the Holy Spirit and with fire.
+        <cite>Matthew 3:11</cite>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SIGNALS ===================== -->
+  <section class="page" id="p-signals">
+    <main class="stage">
+      <p class="idle" id="idle">Waiting for the next setup.</p>
+
+      <div id="live" hidden>
+        <p class="eyebrow" id="eyebrow"></p>
+        <p class="call" id="call"></p>
+        <p class="clock"><span id="clockNum">0</span><span class="clock__unit">s</span></p>
+        <p class="reason" id="reason"></p>
+      </div>
+
+      <section class="facts" id="facts" hidden>
+        <div class="fact"><span class="fact__k">Confidence</span><span class="fact__v" id="fConf">—</span></div>
+        <div class="fact"><span class="fact__k">Grade</span><span class="fact__v" id="fGrade">—</span></div>
+        <div class="fact"><span class="fact__k">Frame</span><span class="fact__v" id="fFrame">—</span></div>
+        <div class="fact"><span class="fact__k">Trade</span><span class="fact__v" id="fTrade">—</span></div>
+      </section>
+    </main>
+  </section>
+
+  <!-- ===================== STAKE ===================== -->
+  <section class="page" id="p-stake">
+    <div class="scroll">
+      <h2 class="ph">Stake calculator</h2>
+      <p class="pd">Binary payouts are asymmetric — a loss costs the whole stake while a win returns only the payout. Size from what you're willing to lose, not what you hope to make.</p>
+
+      <label class="f"><span>Account balance</span><input class="f" id="sBal" type="number" inputmode="decimal" value="1000"></label>
+      <label class="f"><span>Risk per trade (%)</span><input class="f" id="sRisk" type="number" inputmode="decimal" value="2"></label>
+      <label class="f"><span>Payout (%)</span><input class="f" id="sPay" type="number" inputmode="decimal" value="80"></label>
+
+      <div class="out">
+        <div><div class="k">Stake</div><div class="v" id="sStake">—</div></div>
+        <div><div class="k">Win returns</div><div class="v" id="sWin">—</div></div>
+        <div><div class="k">Loss costs</div><div class="v" id="sLoss">—</div></div>
+        <div><div class="k">Break-even win rate</div><div class="v" id="sBE">—</div></div>
+      </div>
+      <p class="pd" style="margin-top:14px" id="sNote"></p>
+    </div>
+  </section>
+
+  <!-- ===================== SESSIONS ===================== -->
+  <section class="page" id="p-sessions">
+    <div class="scroll">
+      <h2 class="ph">Session clock</h2>
+      <p class="pd">OTC pairs run around the clock, but liquidity and behaviour still track the majors. Overlaps are where movement concentrates.</p>
+      <div id="sesList"></div>
+      <div class="card" style="margin-top:20px">
+        <div class="card__k">Your local time</div>
+        <div class="card__v" id="localTime">—</div>
+        <div class="card__note" id="overlapNote"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RISK OF RUIN ===================== -->
+  <section class="page" id="p-streak">
+    <div class="scroll">
+      <h2 class="ph">Risk of ruin</h2>
+      <p class="pd">Losing streaks are longer than intuition suggests. This shows how deep a drawdown to expect before it happens, not after.</p>
+
+      <label class="f"><span>Win rate (%)</span><input class="f" id="rWin" type="number" inputmode="decimal" value="60"></label>
+      <label class="f"><span>Risk per trade (%)</span><input class="f" id="rRisk" type="number" inputmode="decimal" value="2"></label>
+      <label class="f"><span>Trades planned</span><input class="f" id="rN" type="number" inputmode="numeric" value="200"></label>
+
+      <div class="out">
+        <div><div class="k">Likely worst streak</div><div class="v" id="rStreak">—</div></div>
+        <div><div class="k">Drawdown from it</div><div class="v" id="rDD">—</div></div>
+        <div><div class="k">Chance of 10 in a row</div><div class="v" id="r10">—</div></div>
+        <div><div class="k">Payout needed to break even</div><div class="v" id="rPay">—</div></div>
+      </div>
+      <p class="pd" style="margin-top:14px" id="rNote"></p>
+    </div>
+  </section>
+
+  <!-- ===================== ALERTS ===================== -->
+  <section class="page" id="p-alerts">
+    <div class="scroll">
+      <h2 class="ph">Alerts &amp; setup</h2>
+      <p class="pd">Signals appear on the Signals page whenever this app is open. Lock-screen alerts need one extra step on iPhone.</p>
+      <div class="card">
+        <div class="card__k">Notifications</div>
+        <div class="card__v" id="aState" style="font-size:19px">—</div>
+        <div class="card__note" id="aNote"></div>
+      </div>
+      <button class="btn" id="enable">Turn on alerts</button>
+      <p class="hint" id="hint" hidden style="margin-top:12px"></p>
+    </div>
+  </section>
+</div>
 
 <script type="module">
 /* =======================================================================
    CONFIG — replace these three values, then deploy.
    ======================================================================= */
-const SUPABASE_URL  = "https://iwlhawbdvnqledgppeyw.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bGhhd2Jkdm5xbGVkZ3BwZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMDEwMDYsImV4cCI6MjEwMTc3NzAwNn0.KZNdJqlLOkNytaX2e-NfdDakvqYs9zyxlmEbgZdr69Q";
-const VAPID_PUBLIC  = "fdgfdghhfjgjgjhjgjgjvnhjfhjjghgjjgjjggjgjj";
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON = "YOUR-ANON-KEY";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
 /* ===================================================================== */
 
 const $ = (id) => document.getElementById(id);
+const now = () => Date.now() / 1000;
+
+/* =======================================================================
+   FLAMES — blue-into-black, drifting upward. Canvas because a few hundred
+   soft additive sprites stay smooth where that many DOM nodes would not.
+   ======================================================================= */
+(function flames(){
+  const cv = $("flames"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, dpr = 1, parts = [], bolts = [], raf = 0;
+
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function size(){
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+
+  function seed(){
+    // Columns of flame spread across the base so it reads as a wall of fire
+    // rather than one central plume.
+    parts = [];
+    const count = Math.round(Math.min(220, W / 2.2));
+    for (let i=0;i<count;i++) parts.push(newPart(H - Math.random()*H*0.9));
+    bolts = [];
+    for (let i=0;i<7;i++) bolts.push(newBolt(Math.random()*H));
+  }
+
+  function newPart(y){
+    // Weighted toward the base so the fire has a body and licks upward,
+    // instead of an even haze across the whole screen.
+    const reach = 0.34 + Math.random()*0.62;
+    return {
+      x: Math.random()*W,
+      y: y === undefined ? H + Math.random()*60 : y,
+      r: 10 + Math.random()*34,
+      v: 0.5 + Math.random()*1.5,
+      drift: (Math.random()-0.5)*0.5,
+      wob: Math.random()*Math.PI*2,
+      top: H * (1 - reach),
+      heat: Math.random(),
+    };
+  }
+
+  function newBolt(y){
+    return {
+      x: 20 + Math.random()*(W-40),
+      y: y === undefined ? H + 40 : y,
+      s: 9 + Math.random()*9,
+      v: 0.35 + Math.random()*0.5,
+      sway: Math.random()*Math.PI*2,
+      a: 0.25 + Math.random()*0.4,
+    };
+  }
+
+  function drawBolt(b){
+    const s = b.s;
+    ctx.save();
+    ctx.translate(b.x + Math.sin(b.sway)*14, b.y);
+    ctx.globalAlpha = b.a;
+    ctx.fillStyle = "#8FD4FF";
+    ctx.shadowColor = "#2D6BFF";
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.moveTo(0.15*s, -s);
+    ctx.lineTo(-0.45*s, 0.15*s);
+    ctx.lineTo(-0.05*s, 0.15*s);
+    ctx.lineTo(-0.15*s, s);
+    ctx.lineTo(0.45*s, -0.15*s);
+    ctx.lineTo(0.05*s, -0.15*s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  let t0 = 0;
+
+  function frame(){
+    ctx.clearRect(0,0,W,H);
+    ctx.globalCompositeOperation = "lighter";
+
+    // The bed of the fire. Without it the licks read as drifting sparks
+    // instead of flame coming off something burning.
+    t0 += 0.016;
+    const bedH = H * 0.42;
+    const breathe = 0.85 + Math.sin(t0*0.8)*0.15;
+    const bed = ctx.createLinearGradient(0, H, 0, H - bedH);
+    bed.addColorStop(0,    `rgba(60,130,255,${(0.20*breathe).toFixed(3)})`);
+    bed.addColorStop(0.28, `rgba(38,90,220,${(0.10*breathe).toFixed(3)})`);
+    bed.addColorStop(1,    "rgba(4,6,15,0)");
+    ctx.fillStyle = bed;
+    ctx.fillRect(0, H - bedH, W, bedH);
+
+    for (const p of parts){
+      p.y -= p.v;
+      p.wob += 0.05;
+      p.x += p.drift + Math.sin(p.wob) * 0.5;
+
+      // How far through its own climb this one is: bright and fat at the
+      // base, thin and faint as it burns out. Each has its own ceiling, so
+      // the flame edge is ragged rather than a flat band.
+      const span = H - p.top;
+      const prog = Math.min(1, Math.max(0, (H - p.y) / span));
+      const alpha = Math.min(1, prog*7) * Math.pow(1 - prog, 1.35);
+      if (alpha > 0.004){
+        const hot = p.heat * (1 - prog);
+        const rx = p.r * (1 - prog*0.55);
+        const ry = rx * 2.1;            // vertical stretch reads as a lick
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.scale(1, ry/rx);
+        // Built AFTER the transform and centred on the origin — a gradient
+        // made in page coordinates lands at double the offset once the
+        // context is translated, which makes it vanish off-screen.
+        const g = ctx.createRadialGradient(0,0,0,0,0,rx);
+        g.addColorStop(0,    `rgba(${Math.round(130+125*hot)},${Math.round(200+45*hot)},255,${(0.40*alpha).toFixed(3)})`);
+        g.addColorStop(0.40, `rgba(45,107,255,${(0.24*alpha).toFixed(3)})`);
+        g.addColorStop(1,    "rgba(4,6,15,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(0, 0, rx, 0, Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (prog >= 1 || p.y < -p.r*2) Object.assign(p, newPart());
+    }
+
+    ctx.globalCompositeOperation = "source-over";
+    for (const b of bolts){
+      b.y -= b.v;
+      b.sway += 0.012;
+      drawBolt(b);
+      if (b.y < -30) Object.assign(b, newBolt());
+    }
+
+    raf = requestAnimationFrame(frame);
+  }
+
+  function start(){ if (!raf && !reduce) raf = requestAnimationFrame(frame); }
+  function stop(){ cancelAnimationFrame(raf); raf = 0; }
+
+  size(); seed();
+  if (reduce) { frame(); stop(); } else start();
+
+  window.addEventListener("resize", () => { size(); seed(); });
+  // Don't burn battery animating a screen nobody is looking at.
+  document.addEventListener("visibilitychange", () =>
+    document.visibilityState === "visible" ? start() : stop());
+})();
+
+/* =======================================================================
+   ROUTER
+   ======================================================================= */
+const ROUTES = ["home","signals","stake","sessions","streak","alerts"];
+const menu = $("menu"), scrim = $("scrim");
+
+function closeMenu(){ menu.classList.remove("open"); scrim.classList.remove("open"); }
+$("burger").addEventListener("click", () => {
+  const open = menu.classList.toggle("open");
+  scrim.classList.toggle("open", open);
+});
+scrim.addEventListener("click", closeMenu);
+
+$("grpTools").querySelector("button").addEventListener("click", () =>
+  $("grpTools").classList.toggle("open"));
+
+function route(){
+  let r = (location.hash.replace("#/","") || "home");
+  if (!ROUTES.includes(r)) r = "home";
+
+  for (const id of ROUTES) $("p-"+id).classList.toggle("active", id === r);
+  document.querySelectorAll(".nav a").forEach(a =>
+    a.classList.toggle("active", a.dataset.route === r));
+
+  // The drain meter belongs to the countdown, so it only shows with it.
+  $("meter").hidden = r !== "signals";
+  if (["stake","sessions","streak"].includes(r)) $("grpTools").classList.add("open");
+  closeMenu();
+}
+window.addEventListener("hashchange", route);
+
+/* =======================================================================
+   TOOLS
+   ======================================================================= */
+const money = (n) => "$" + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const num = (id) => parseFloat($(id).value) || 0;
+
+function calcStake(){
+  const bal = num("sBal"), risk = num("sRisk"), pay = num("sPay");
+  const stake = bal * risk / 100;
+  const win = stake * pay / 100;
+  $("sStake").textContent = money(stake);
+  $("sWin").textContent = "+" + money(win);
+  $("sLoss").textContent = "−" + money(stake);
+
+  // A win returns only the payout, a loss takes the stake, so break-even sits
+  // above 50% for any payout under 100%.
+  const be = pay > 0 ? 100 / (1 + pay/100) : 0;
+  $("sBE").textContent = be ? be.toFixed(1) + "%" : "—";
+  $("sNote").textContent = pay > 0
+    ? `At a ${pay}% payout you need better than ${be.toFixed(1)}% accuracy just to stand still. Every percentage point of payout you give up raises that bar.`
+    : "Enter the payout your broker is quoting for this asset.";
+}
+["sBal","sRisk","sPay"].forEach(id => $(id).addEventListener("input", calcStake));
+
+function calcRuin(){
+  const w = Math.min(99.9, Math.max(0.1, num("rWin"))) / 100;
+  const risk = num("rRisk") / 100;
+  const n = Math.max(1, num("rN"));
+  const l = 1 - w;
+
+  // Expected longest run of losses in n trials.
+  const streak = Math.max(1, Math.round(Math.log(n * l) / Math.log(1/l)));
+  const dd = (1 - Math.pow(1 - risk, streak)) * 100;
+  const ten = Math.pow(l, 10) * n * 100;
+
+  $("rStreak").textContent = streak + " losses";
+  $("rDD").textContent = dd.toFixed(1) + "%";
+  $("r10").textContent = Math.min(100, ten).toFixed(1) + "%";
+  $("rPay").textContent = w > 0 ? ((1/w - 1) * 100).toFixed(0) + "%" : "—";
+  $("rNote").textContent =
+    `Across ${n} trades at ${(w*100).toFixed(0)}% accuracy, a run of about ${streak} straight losses is the expected outcome — not the worst case. Risking ${(risk*100).toFixed(1)}% each time, that run costs roughly ${dd.toFixed(1)}% of the account.`;
+}
+["rWin","rRisk","rN"].forEach(id => $(id).addEventListener("input", calcRuin));
+
+const SESSIONS = [
+  { n:"Sydney", o:21, c:6  },
+  { n:"Tokyo",  o:0,  c:9  },
+  { n:"London", o:7,  c:16 },
+  { n:"New York", o:12, c:21 },
+];
+
+function paintSessions(){
+  const d = new Date();
+  const h = d.getUTCHours() + d.getUTCMinutes()/60;
+  const open = (s) => s.o < s.c ? (h >= s.o && h < s.c) : (h >= s.o || h < s.c);
+
+  $("sesList").innerHTML = SESSIONS.map(s => `
+    <div class="ses">
+      <span class="ses__n">${s.n}</span>
+      <span class="ses__t">${String(s.o).padStart(2,"0")}:00–${String(s.c).padStart(2,"0")}:00 UTC</span>
+      <span class="pill ${open(s)?"on":""}">${open(s)?"Open":"Closed"}</span>
+    </div>`).join("");
+
+  $("localTime").textContent = d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  const live = SESSIONS.filter(open).map(s => s.n);
+  $("overlapNote").textContent = live.length > 1
+    ? `${live.join(" and ")} are both open — overlaps carry the heaviest flow of the day.`
+    : live.length === 1
+      ? `${live[0]} only. Thinner conditions than an overlap.`
+      : "Between sessions. The quietest stretch of the clock.";
+}
+setInterval(paintSessions, 15000);
+
+/* =======================================================================
+   SIGNAL FEED — unchanged behaviour, now living on its own page
+   ======================================================================= */
 const el = {
-  meter:$("meterFill"), dot:$("dot"), feedState:$("feedState"), asset:$("asset"),
-  stage:$("stage"), idle:$("idle"), live:$("live"), eyebrow:$("eyebrow"),
-  call:$("call"), clockNum:$("clockNum"), reason:$("reason"), facts:$("facts"),
+  dot:$("dot"), feedState:$("feedState"), asset:$("asset"),
+  idle:$("idle"), live:$("live"), eyebrow:$("eyebrow"), call:$("call"),
+  clockNum:$("clockNum"), reason:$("reason"), facts:$("facts"),
   fConf:$("fConf"), fGrade:$("fGrade"), fFrame:$("fFrame"), fTrade:$("fTrade"),
-  enable:$("enable"), hint:$("hint"), clockUnit:$("clockUnit"),
+  enable:$("enable"), hint:$("hint"),
 };
 
 if (SUPABASE_URL.includes("YOUR-PROJECT")) {
   document.body.innerHTML =
-    '<div class="setup"><p><b style="color:#F2EEFB">Not configured yet.</b></p>' +
+    '<div class="setup"><p><b style="color:#EEF3FF">Not configured yet.</b></p>' +
     '<p style="margin-top:12px">Open <code>index.html</code> and fill in ' +
     '<code>SUPABASE_URL</code>, <code>SUPABASE_ANON</code> and ' +
     '<code>VAPID_PUBLIC</code> near the bottom of the file.</p></div>';
@@ -349,331 +716,233 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
   realtime: { params: { eventsPerSecond: 20 } },
 });
 
-/* ---------------------------------------------------------------------
-   Signal state. Held in memory only — nothing is persisted anywhere.
-   --------------------------------------------------------------------- */
-let current = null;
-let lastBeat = 0;
+let current = null, lastBeat = 0, lastAsset = "", skew = 0;
 
-const now = () => Date.now() / 1000;
+/* Signals carry sent_at on the PC's clock. Measuring the gap on live
+   arrivals lets a signal fetched later be placed correctly on this phone's
+   timeline even if the two clocks disagree. */
+function noteSkew(sig){ if (sig && sig.sent_at) skew = now() - Number(sig.sent_at); }
 
-function setPhaseColor(varName) {
-  document.documentElement.style.setProperty("--phase", `var(${varName})`);
-}
+const anchorOf = (sig) => sig && sig.sent_at ? Number(sig.sent_at) + skew : now();
+const endsAt = (sig, at) => at + Number(sig.entry_in||0) + Number(sig.trade_seconds||0);
 
-function show(sig, restoredAt) {
-  if (!sig) return;
-  const dir = String(sig.direction || "").toUpperCase();
+const setPhase = (v) => document.documentElement.style.setProperty("--phase", `var(${v})`);
+const setDrain = (f) =>
+  document.documentElement.style.setProperty("--drain",
+    Math.min(100, Math.max(0, f*100)).toFixed(1) + "%");
 
-  // Anchor on the moment the tool SENT this, not the moment it arrived.
-  // That removes transport latency, and it means a phone opening mid-trade
-  // lands on the correct remaining time rather than restarting the clock.
-  //
-  // sent_at is real UTC epoch from the PC, so it is comparable to this
-  // device's clock.
-  let base = restoredAt || now();
-  if (restoredAt == null && sig.sent_at) {
-    const span = Number(sig.entry_in || 0) + Number(sig.trade_seconds || 0);
-    const age = now() - Number(sig.sent_at);
+function show(sig, anchor){
+  const at = anchor === undefined ? anchorOf(sig) : anchor;
+  if (now() >= endsAt(sig, at)) return;           // never display a finished trade
 
-    // Arrived after the trade was already over — a late push, a socket that
-    // flushed a backlog, a tab waking up. Showing it would start a fresh
-    // countdown on a dead setup, so drop it entirely.
-    if (age > span + 10) return;
-
-    // Anchor to emit time for anything from sub-second transport lag up to
-    // the full length of the trade. That upper bound is what makes opening
-    // the app mid-trade land on the correct remaining time. A negative skew
-    // means a clock is wrong, so fall back to arrival.
-    if (age >= -3) base = Number(sig.sent_at);
-  }
-  current = {
-    ...sig,
-    _anchor: base,
-    _entryAt: base + Number(sig.entry_in || 0),
-    _expiresAt: base + Number(sig.entry_in || 0) + Number(sig.trade_seconds || 0),
-  };
+  const dir = String(sig.direction||"").toUpperCase();
+  current = { ...sig, _anchor:at, _entryAt:at + Number(sig.entry_in||0), _expiresAt:endsAt(sig,at) };
 
   el.call.textContent = dir;
   el.reason.textContent = sig.reason || "";
-  el.fConf.textContent  = Math.round((sig.confidence || 0) * 100) + "%";
+  el.fConf.textContent  = Math.round((sig.confidence||0)*100) + "%";
   el.fGrade.textContent = sig.grade || "—";
   el.fFrame.textContent = sig.timeframe || "—";
-  el.fTrade.textContent = sig.trade_seconds ? Math.round(sig.trade_seconds) + "s" : "—";
-  if (sig.asset) {
-    lastAsset = sig.asset;
-    el.asset.textContent = sig.asset;
-  }
+  el.fTrade.textContent = sig.trade_seconds ? Math.round(sig.trade_seconds)+"s" : "—";
 
-  el.idle.hidden = true;
-  el.live.hidden = false;
-  el.facts.hidden = false;
-  document.body.classList.add("is-active");
+  if (sig.asset){ lastAsset = sig.asset; el.asset.textContent = sig.asset; }
 
-  const dirVar = dir === "BUY" ? "--rise" : dir === "SELL" ? "--fall" : "--brand";
-  document.documentElement.style.setProperty("--dir", `var(${dirVar})`);
-  setPhaseColor("--brand");
+  el.idle.hidden = true; el.live.hidden = false; el.facts.hidden = false;
+  document.documentElement.style.setProperty("--dir",
+    `var(${dir==="BUY"?"--rise":dir==="SELL"?"--fall":"--brand"})`);
 
-  if (!restoredAt) save();
-  tick();
+  save(); tick(); paintHome();
 }
 
-/* A reload should not wipe a live signal. This is the user's own device
-   holding its own screen state — nothing leaves the phone, and the entry is
-   dropped the moment the trade finishes. */
-const STORE = "star.signal";
-
-function save() {
-  try {
-    localStorage.setItem(STORE, JSON.stringify({ sig: current, at: current._anchor || now() }));
-  } catch {}
-}
-
-function forget() {
-  try { localStorage.removeItem(STORE); } catch {}
-}
-
-function restore() {
-  let raw;
-  try { raw = localStorage.getItem(STORE); } catch { return; }
-  if (!raw) return;
-  try {
-    const { sig, at } = JSON.parse(raw);
-    if (!sig) return forget();
-    const ends = at + Number(sig.entry_in || 0) + Number(sig.trade_seconds || 0);
-    if (now() >= ends) return forget();   // already finished while away
-    shownKey = sig.signal_key || "";
-    show(sig, at);
-  } catch {
-    forget();
-  }
-}
-
-function clear() {
+function clear(){
   current = null;
-  el.fConf.textContent = "—";
-  el.fGrade.textContent = "—";
-  el.fFrame.textContent = "—";
-  el.fTrade.textContent = "—";
-  el.call.textContent = "";
-  el.eyebrow.textContent = "";
-  el.reason.textContent = "";
-  el.clockUnit.hidden = false;
-  el.live.hidden = true;
-  el.facts.hidden = true;
-  el.idle.hidden = false;
-  // Set on :root only. Setting it on the element itself would shadow the
-  // root value permanently and the meter would never fill again.
-  document.documentElement.style.setProperty("--drain", "100%");
-  document.body.classList.remove("is-active");
+  el.live.hidden = true; el.facts.hidden = true; el.idle.hidden = false;
+  el.call.classList.remove("call--now");
+  setDrain(1); setPhase("--brand"); paintHome();
 }
 
-/* The countdown is the interface. Three states, in order:
-     ENTER IN 12s   -> waiting for the entry moment
-     SELL NOW  9s   -> the trade is on, this is the expiry clock
-     FINISHED       -> done, then the screen empties itself
-*/
-function tick() {
+function tick(){
   if (!current) return;
-
   const t = now();
-  const entry = current._entryAt;
-  const expiry = current._expiresAt;
-  const dir = String(current.direction || "").toUpperCase();
-  const anchor = current._anchor;
+  const { _entryAt:entry, _expiresAt:expiry, _anchor:anchor } = current;
+  const dir = String(current.direction||"").toUpperCase();
 
-  if (t < entry) {
+  if (t < entry){
     el.eyebrow.textContent = "Enter in";
     el.call.textContent = dir;
     el.call.classList.remove("call--now");
-    el.clockNum.textContent = Math.max(0, Math.round(entry - t));
-    setPhaseColor("--brand");
+    el.clockNum.textContent = Math.max(1, Math.ceil(entry - t));
+    setPhase("--brand");
     setDrain((t - anchor) / Math.max(entry - anchor, 1));
     return;
   }
-
-  if (t < expiry) {
-    // Entry moment. The word changes to an instruction, not a label.
+  if (t < expiry){
     el.eyebrow.textContent = "Expires in";
     el.call.textContent = dir + " NOW";
     el.call.classList.add("call--now");
-    el.clockNum.textContent = Math.max(0, Math.round(expiry - t));
-    setPhaseColor(dir === "BUY" ? "--rise" : dir === "SELL" ? "--fall" : "--brand");
+    el.clockNum.textContent = Math.max(1, Math.ceil(expiry - t));
+    setPhase(dir==="BUY"?"--rise":dir==="SELL"?"--fall":"--brand");
     setDrain((t - entry) / Math.max(expiry - entry, 1));
     return;
   }
-
-  // Finished. If we were away for a long time there is nothing worth
-  // showing at all — go straight to idle rather than flash a dead result.
-  if (t - expiry > 10) { forget(); clear(); return; }
-
-  // Otherwise say so plainly, hold it long enough to read, then empty out.
   el.eyebrow.textContent = "Trade finished";
   el.call.textContent = dir;
   el.call.classList.remove("call--now");
   el.clockNum.textContent = "0";
-  setPhaseColor("--brand");
-  setDrain(1);
-  forget();
-
-  if (!current._ending) {
+  setPhase("--brand"); setDrain(1); forget();
+  if (!current._ending){
     current._ending = true;
     setTimeout(() => { if (current && now() >= current._expiresAt) clear(); }, 4000);
   }
 }
+setInterval(tick, 100);
 
-function setDrain(fraction) {
-  const pct = Math.min(100, Math.max(0, fraction * 100));
-  document.documentElement.style.setProperty("--drain", pct.toFixed(1) + "%");
+/* A refresh shouldn't blank a running trade. Phone's own storage, holding its
+   own screen — dropped the moment the trade ends. */
+const STORE = "star.signal";
+const save = () => { try{ localStorage.setItem(STORE, JSON.stringify({sig:current, at:current._anchor})); }catch{} };
+const forget = () => { try{ localStorage.removeItem(STORE); }catch{} };
+function restore(){
+  let raw; try{ raw = localStorage.getItem(STORE); }catch{ return; }
+  if (!raw) return;
+  try{
+    const { sig, at } = JSON.parse(raw);
+    if (sig && now() < endsAt(sig, at)) show(sig, at); else forget();
+  }catch{ forget(); }
 }
 
-setInterval(tick, 50);
-
-/* ---------------------------------------------------------------------
-   Live / offline. A user must be able to tell "no setups right now" apart
-   from "the machine died".
-   --------------------------------------------------------------------- */
-function paintFeed() {
-  const age = now() - lastBeat;
-  if (!lastBeat) {
-    el.dot.className = "dot";
-    el.feedState.textContent = "Connecting";
-  } else if (age < 30) {
-    el.dot.className = "dot live";
-    el.feedState.textContent = "Live";
-  } else {
+function paintFeed(){
+  const age = now() - skew - lastBeat;
+  let label;
+  if (!lastBeat){ el.dot.className = "dot"; label = "Connecting"; }
+  else if (age < 30){ el.dot.className = "dot live"; label = "Live"; }
+  else {
     el.dot.className = "dot stale";
-    const mins = Math.floor(age / 60);
-    el.feedState.textContent = mins < 1 ? "Feed dropped" : `Offline ${mins}m`;
+    const m = Math.floor(age/60);
+    label = m < 1 ? "Reconnecting" : `Offline ${m}m`;
   }
+  el.feedState.textContent = label;
+  $("hStatus").textContent = label;
+  $("hNote").textContent =
+    label === "Live" ? "The desk is running and reporting in."
+    : label === "Connecting" ? "Checking in with the desk."
+    : "No check-in from the desk. Signals are paused until it's back.";
 }
 setInterval(paintFeed, 1000);
 
-let lastAsset = "";
-let shownKey = "";
+function paintHome(){
+  $("hAsset").textContent = lastAsset || "—";
+  $("hSignal").textContent = current
+    ? `${String(current.direction||"").toUpperCase()} live`
+    : "Quiet";
+}
 
-function applyBeat(row) {
+function applyBeat(row){
   if (!row) return;
   lastBeat = Number(row.beat_at || 0);
-
-  if (row.asset && row.asset !== lastAsset) {
-    // The pair changed. Whatever is on screen belongs to the old pair, so
-    // drop it rather than let a countdown keep running against an asset the
-    // tool is no longer watching.
+  if (row.asset && row.asset !== lastAsset){
+    // Pair changed. Anything on screen belongs to the old pair.
     lastAsset = row.asset;
     el.asset.textContent = row.asset;
-    if (current) { forget(); clear(); }
+    if (current){ forget(); clear(); }
   }
-  paintFeed();
+  paintFeed(); paintHome();
 }
 
-/* ---------------------------------------------------------------------
-   Connection. Realtime sockets die when iOS backgrounds the tab, and they
-   do not always come back on their own. So: one place that builds the
-   connection, one watchdog that rebuilds it, and a state pull on every
-   reconnect so nothing is missed while the socket was gone.
-   --------------------------------------------------------------------- */
-let channel = null;
-let lastRebuild = 0;
+function applySignal(sig){
+  if (!sig || !sig.sent_at) return;
+  if (current && current.signal_key === sig.signal_key) return;
+  if (lastAsset && sig.asset && sig.asset !== lastAsset) return;
+  const at = anchorOf(sig);
+  if (now() >= endsAt(sig, at)) return;
+  show(sig, at);
+}
 
-async function pullState() {
-  try {
-    const [{ data: beat }, { data: live }] = await Promise.all([
-      sb.from("feed_status").select("*").eq("id", 1).maybeSingle(),
-      sb.from("live_signal").select("*").eq("id", 1).maybeSingle(),
+/* Realtime sockets die when iOS backgrounds the tab and don't reliably come
+   back. One builder, one watchdog, and a state pull on every reconnect so
+   nothing is missed while the socket was gone. */
+let channel = null, lastRebuild = 0;
+
+async function pullState(){
+  try{
+    const [beat, live] = await Promise.all([
+      sb.from("feed_status").select("*").eq("id",1).maybeSingle(),
+      sb.from("live_signal").select("*").eq("id",1).maybeSingle(),
     ]);
-
-    applyBeat(beat);
-
-    // Pick up a trade already in progress. If it has finished, ignore it —
-    // this row is a current-state slot, not a result to display.
-    if (live && live.sent_at) {
-      const ends = Number(live.sent_at) + Number(live.entry_in || 0) + Number(live.trade_seconds || 0);
-      const running = now() < ends;
-      const isNewer = !current || Number(live.sent_at) > Number(current.sent_at || 0);
-      if (running && isNewer) show(live);
-    }
-  } catch {
-    /* offline; the watchdog will try again */
-  }
+    applyBeat(beat.data);
+    // Catch a trade that started before this screen existed — broadcasts are
+    // fire-and-forget, so without this it would never appear.
+    if (live.data) applySignal(live.data);
+  }catch{ /* offline; the watchdog retries */ }
 }
 
-function connect() {
-  if (channel) { try { sb.removeChannel(channel); } catch {} }
+function connect(){
   lastRebuild = now();
-
+  if (channel){ try{ sb.removeChannel(channel); }catch{} }
   channel = sb.channel("star-trader")
-    .on("broadcast", { event: "signal" }, ({ payload }) => show(payload))
-    .on("broadcast", { event: "heartbeat" }, ({ payload }) => applyBeat(payload))
-    .on("postgres_changes",
-        { event: "*", schema: "public", table: "feed_status" },
-        ({ new: row }) => applyBeat(row))
-    .on("postgres_changes",
-        { event: "*", schema: "public", table: "live_signal" },
-        ({ new: row }) => {
-          if (!row || !row.sent_at) return;
-          if (!current || Number(row.sent_at) > Number(current.sent_at || 0)) show(row);
-        })
-    .subscribe((status) => {
-      if (status === "SUBSCRIBED") pullState();
-    });
+    .on("broadcast", { event:"signal" }, ({payload}) => { noteSkew(payload); applySignal(payload); })
+    .on("broadcast", { event:"heartbeat" }, ({payload}) => applyBeat(payload))
+    .on("postgres_changes", { event:"*", schema:"public", table:"feed_status" },
+        ({new:row}) => applyBeat(row))
+    .on("postgres_changes", { event:"*", schema:"public", table:"live_signal" },
+        ({new:row}) => applySignal(row))
+    .subscribe((status) => { if (status === "SUBSCRIBED") pullState(); });
 }
 
-connect();
-pullState();
-
-// Watchdog. A silent socket is indistinguishable from a quiet market from
-// the outside, so rebuild rather than sit there showing a red dot.
 setInterval(() => {
-  const beatAge = lastBeat ? now() - lastBeat : Infinity;
-  const sinceRebuild = now() - lastRebuild;
-  if (beatAge > 25 && sinceRebuild > 15) connect();
+  const beatAge = now() - skew - lastBeat;
+  if (lastBeat && beatAge > 25 && now() - lastRebuild > 15) connect();
 }, 5000);
 
-// Coming back from the background is the common case on a phone: the socket
-// is usually already dead, and the screen is stale.
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState !== "visible") return;
   pullState();
-  if (!lastBeat || now() - lastBeat > 15) connect();
+  if (now() - lastRebuild > 10) connect();
 });
+window.addEventListener("online", connect);
+window.addEventListener("pageshow", pullState);
 
-window.addEventListener("online", () => { connect(); pullState(); });
-
-/* ---------------------------------------------------------------------
-   Notifications
-   --------------------------------------------------------------------- */
-const standalone =
-  window.matchMedia("(display-mode: standalone)").matches ||
-  window.navigator.standalone === true;
+/* =======================================================================
+   NOTIFICATIONS
+   ======================================================================= */
+const standalone = window.matchMedia("(display-mode: standalone)").matches ||
+                   window.navigator.standalone === true;
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
-function b64ToBytes(base64) {
-  const pad = "=".repeat((4 - (base64.length % 4)) % 4);
-  const raw = atob((base64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+function b64ToBytes(b64){
+  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64+pad).replace(/-/g,"+").replace(/_/g,"/"));
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 
-async function refreshButton() {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+async function refreshButton(){
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)){
     el.enable.hidden = true;
     el.hint.hidden = false;
     el.hint.innerHTML = isIOS && !standalone
       ? 'Tap <b>Share</b>, then <b>Add to Home Screen</b> to get alerts on your lock screen.'
       : "This browser can't deliver alerts. Signals still appear here while the app is open.";
+    $("aState").textContent = isIOS && !standalone ? "Needs install" : "Unavailable";
+    $("aNote").textContent = isIOS && !standalone
+      ? "Apple only allows lock-screen alerts for apps added to the home screen."
+      : "Keep this page open to see signals as they fire.";
     return;
   }
   const reg = await navigator.serviceWorker.ready;
   const sub = await reg.pushManager.getSubscription();
-  if (sub) {
+  if (sub){
     el.enable.textContent = "Alerts on";
     el.enable.classList.add("btn--on");
     el.hint.hidden = false;
     el.hint.textContent = "Tap to turn alerts off.";
+    $("aState").textContent = "On";
+    $("aNote").textContent = "This device will buzz when a signal fires, even with the app closed.";
   } else {
     el.enable.textContent = "Turn on alerts";
     el.enable.classList.remove("btn--on");
     el.hint.hidden = true;
+    $("aState").textContent = "Off";
+    $("aNote").textContent = "Signals only appear while this app is open.";
   }
 }
 
@@ -681,15 +950,13 @@ el.enable.addEventListener("click", async () => {
   const reg = await navigator.serviceWorker.ready;
   const existing = await reg.pushManager.getSubscription();
 
-  if (existing) {
+  if (existing){
     await sb.from("push_subscriptions").delete().eq("endpoint", existing.endpoint);
     await existing.unsubscribe();
-    await refreshButton();
-    return;
+    return refreshButton();
   }
 
-  const permission = await Notification.requestPermission();
-  if (permission !== "granted") {
+  if (await Notification.requestPermission() !== "granted"){
     el.hint.hidden = false;
     el.hint.textContent = "Alerts are blocked. Turn notifications back on in your device settings.";
     return;
@@ -700,29 +967,31 @@ el.enable.addEventListener("click", async () => {
     applicationServerKey: b64ToBytes(VAPID_PUBLIC),
   });
   const raw = sub.toJSON();
-
   const { error } = await sb.from("push_subscriptions").insert({
-    endpoint: raw.endpoint,
-    p256dh: raw.keys.p256dh,
-    auth: raw.keys.auth,
-    label: navigator.userAgent.slice(0, 60),
+    endpoint: raw.endpoint, p256dh: raw.keys.p256dh, auth: raw.keys.auth,
+    label: navigator.userAgent.slice(0,60),
   });
-  if (error && error.code !== "23505") {
+  if (error && error.code !== "23505"){
     el.hint.hidden = false;
     el.hint.textContent = "Couldn't register this device. Check your connection and try again.";
     return;
   }
-  await refreshButton();
+  refreshButton();
 });
 
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator){
   navigator.serviceWorker.register("./sw.js").then(refreshButton).catch(() => {});
-} else {
-  refreshButton();
-}
+} else refreshButton();
 
+/* ===================================================================== */
+route();
+calcStake();
+calcRuin();
+paintSessions();
+paintHome();
 clear();
 restore();
+connect();
 </script>
 </body>
 </html>
