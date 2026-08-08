@@ -121,20 +121,42 @@ body.is-active::before{opacity:1}
   min-height:0;
 }
 
+/* Label and clock read as one line: "ENTER IN 12s". The instruction they
+   act on sits underneath it, larger than anything else on screen. */
+.head{
+  display:flex;
+  align-items:baseline;
+  justify-content:center;
+  gap:11px;
+  min-height:50px;
+}
+
 .eyebrow{
   font-size:11px;
-  letter-spacing:.32em;
+  letter-spacing:.26em;
+  white-space:nowrap;
   text-transform:uppercase;
   color:var(--phase);
-  height:14px;
   transition:color .35s ease;
 }
+
+.clock{
+  font-family:var(--mono);
+  font-weight:600;
+  font-variant-numeric:tabular-nums;
+  font-size:clamp(34px,10.5vw,54px);
+  line-height:1;
+  letter-spacing:-.03em;
+  color:var(--text);
+}
+.clock__unit{font-size:.3em;color:var(--dim);letter-spacing:.05em;margin-left:.06em}
 
 .call{
   font-family:var(--display);
   font-weight:800;
-  font-size:clamp(52px,17vw,104px);
+  font-size:clamp(58px,19vw,118px);
   line-height:.92;
+  margin-top:2px;
   letter-spacing:-.03em;
   color:var(--dir);
 }
@@ -142,20 +164,11 @@ body.is-active::before{opacity:1}
 /* the entry instruction is two words, so it needs its own scale to stay
    on one line at phone widths */
 .call--now{
-  font-size:clamp(34px,11.5vw,72px);
+  font-size:clamp(38px,12.5vw,80px);
   white-space:nowrap;
 }
 
-.clock{
-  font-family:var(--mono);
-  font-weight:600;
-  font-variant-numeric:tabular-nums;
-  font-size:clamp(64px,24vw,132px);
-  line-height:1;
-  letter-spacing:-.05em;
-  color:var(--text);
-}
-.clock__unit{font-size:.28em;color:var(--dim);letter-spacing:.05em;margin-left:.1em}
+
 
 .reason{
   font-size:14px;
@@ -192,6 +205,11 @@ body.is-active::before{opacity:1}
   flex:0 0 auto;
 }
 .fact:first-child{border-left:0}
+/* A class-level display wins over the UA [hidden] rule, so state it here.
+   Without this the data row survives clear() and shows the last trade's
+   numbers under "waiting for the next setup". */
+.facts[hidden]{display:none}
+#live[hidden]{display:none}
 .fact__k{
   display:block;
   font-size:9px;
@@ -278,9 +296,11 @@ body.is-active::before{opacity:1}
     <p class="idle" id="idle">Waiting for the next setup.</p>
 
     <div id="live" hidden>
-      <p class="eyebrow" id="eyebrow"></p>
+      <div class="head">
+        <span class="eyebrow" id="eyebrow"></span>
+        <span class="clock"><span id="clockNum">0</span><span class="clock__unit" id="clockUnit">s</span></span>
+      </div>
       <p class="call" id="call"></p>
-      <p class="clock"><span id="clockNum">0</span><span class="clock__unit" id="clockUnit">s</span></p>
       <p class="reason" id="reason"></p>
     </div>
 
@@ -301,9 +321,9 @@ body.is-active::before{opacity:1}
 /* =======================================================================
    CONFIG — replace these three values, then deploy.
    ======================================================================= */
-const SUPABASE_URL  = "https://iwlhawbdvnqledgppeyw.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bGhhd2Jkdm5xbGVkZ3BwZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMDEwMDYsImV4cCI6MjEwMTc3NzAwNn0.KZNdJqlLOkNytaX2e-NfdDakvqYs9zyxlmEbgZdr69Q";
-const VAPID_PUBLIC  = "fdgfdghhfjgjgjhjgjgjvnhjfhjjghgjjgjjggjgjj";
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON = "YOUR-ANON-KEY";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
 /* ===================================================================== */
 
 const $ = (id) => document.getElementById(id);
@@ -342,11 +362,31 @@ function setPhaseColor(varName) {
 }
 
 function show(sig, restoredAt) {
+  if (!sig) return;
   const dir = String(sig.direction || "").toUpperCase();
 
-  // Anchor on arrival. The tool sends how many seconds until entry and how
-  // long the trade runs; absolute broker timestamps are never trusted.
-  const base = restoredAt || now();
+  // Anchor on the moment the tool SENT this, not the moment it arrived.
+  // That removes transport latency, and it means a phone opening mid-trade
+  // lands on the correct remaining time rather than restarting the clock.
+  //
+  // sent_at is real UTC epoch from the PC, so it is comparable to this
+  // device's clock.
+  let base = restoredAt || now();
+  if (restoredAt == null && sig.sent_at) {
+    const span = Number(sig.entry_in || 0) + Number(sig.trade_seconds || 0);
+    const age = now() - Number(sig.sent_at);
+
+    // Arrived after the trade was already over — a late push, a socket that
+    // flushed a backlog, a tab waking up. Showing it would start a fresh
+    // countdown on a dead setup, so drop it entirely.
+    if (age > span + 10) return;
+
+    // Anchor to emit time for anything from sub-second transport lag up to
+    // the full length of the trade. That upper bound is what makes opening
+    // the app mid-trade land on the correct remaining time. A negative skew
+    // means a clock is wrong, so fall back to arrival.
+    if (age >= -3) base = Number(sig.sent_at);
+  }
   current = {
     ...sig,
     _anchor: base,
@@ -402,6 +442,7 @@ function restore() {
     if (!sig) return forget();
     const ends = at + Number(sig.entry_in || 0) + Number(sig.trade_seconds || 0);
     if (now() >= ends) return forget();   // already finished while away
+    shownKey = sig.signal_key || "";
     show(sig, at);
   } catch {
     forget();
@@ -410,6 +451,13 @@ function restore() {
 
 function clear() {
   current = null;
+  el.fConf.textContent = "—";
+  el.fGrade.textContent = "—";
+  el.fFrame.textContent = "—";
+  el.fTrade.textContent = "—";
+  el.call.textContent = "";
+  el.eyebrow.textContent = "";
+  el.reason.textContent = "";
   el.clockUnit.hidden = false;
   el.live.hidden = true;
   el.facts.hidden = true;
@@ -438,7 +486,7 @@ function tick() {
     el.eyebrow.textContent = "Enter in";
     el.call.textContent = dir;
     el.call.classList.remove("call--now");
-    el.clockNum.textContent = Math.max(1, Math.ceil(entry - t));
+    el.clockNum.textContent = Math.max(0, Math.round(entry - t));
     setPhaseColor("--brand");
     setDrain((t - anchor) / Math.max(entry - anchor, 1));
     return;
@@ -449,13 +497,17 @@ function tick() {
     el.eyebrow.textContent = "Expires in";
     el.call.textContent = dir + " NOW";
     el.call.classList.add("call--now");
-    el.clockNum.textContent = Math.max(1, Math.ceil(expiry - t));
+    el.clockNum.textContent = Math.max(0, Math.round(expiry - t));
     setPhaseColor(dir === "BUY" ? "--rise" : dir === "SELL" ? "--fall" : "--brand");
     setDrain((t - entry) / Math.max(expiry - entry, 1));
     return;
   }
 
-  // Finished. Say so plainly, hold it long enough to read, then empty out.
+  // Finished. If we were away for a long time there is nothing worth
+  // showing at all — go straight to idle rather than flash a dead result.
+  if (t - expiry > 10) { forget(); clear(); return; }
+
+  // Otherwise say so plainly, hold it long enough to read, then empty out.
   el.eyebrow.textContent = "Trade finished";
   el.call.textContent = dir;
   el.call.classList.remove("call--now");
@@ -475,7 +527,7 @@ function setDrain(fraction) {
   document.documentElement.style.setProperty("--drain", pct.toFixed(1) + "%");
 }
 
-setInterval(tick, 100);
+setInterval(tick, 50);
 
 /* ---------------------------------------------------------------------
    Live / offline. A user must be able to tell "no setups right now" apart
@@ -498,6 +550,7 @@ function paintFeed() {
 setInterval(paintFeed, 1000);
 
 let lastAsset = "";
+let shownKey = "";
 
 function applyBeat(row) {
   if (!row) return;
@@ -514,17 +567,78 @@ function applyBeat(row) {
   paintFeed();
 }
 
-sb.from("feed_status").select("*").eq("id", 1).maybeSingle()
-  .then(({ data }) => applyBeat(data))
-  .catch(() => {});
+/* ---------------------------------------------------------------------
+   Connection. Realtime sockets die when iOS backgrounds the tab, and they
+   do not always come back on their own. So: one place that builds the
+   connection, one watchdog that rebuilds it, and a state pull on every
+   reconnect so nothing is missed while the socket was gone.
+   --------------------------------------------------------------------- */
+let channel = null;
+let lastRebuild = 0;
 
-sb.channel("star-trader")
-  .on("broadcast", { event: "signal" }, ({ payload }) => show(payload))
-  .on("broadcast", { event: "heartbeat" }, ({ payload }) => applyBeat(payload))
-  .on("postgres_changes",
-      { event: "*", schema: "public", table: "feed_status" },
-      ({ new: row }) => applyBeat(row))
-  .subscribe();
+async function pullState() {
+  try {
+    const [{ data: beat }, { data: live }] = await Promise.all([
+      sb.from("feed_status").select("*").eq("id", 1).maybeSingle(),
+      sb.from("live_signal").select("*").eq("id", 1).maybeSingle(),
+    ]);
+
+    applyBeat(beat);
+
+    // Pick up a trade already in progress. If it has finished, ignore it —
+    // this row is a current-state slot, not a result to display.
+    if (live && live.sent_at) {
+      const ends = Number(live.sent_at) + Number(live.entry_in || 0) + Number(live.trade_seconds || 0);
+      const running = now() < ends;
+      const isNewer = !current || Number(live.sent_at) > Number(current.sent_at || 0);
+      if (running && isNewer) show(live);
+    }
+  } catch {
+    /* offline; the watchdog will try again */
+  }
+}
+
+function connect() {
+  if (channel) { try { sb.removeChannel(channel); } catch {} }
+  lastRebuild = now();
+
+  channel = sb.channel("star-trader")
+    .on("broadcast", { event: "signal" }, ({ payload }) => show(payload))
+    .on("broadcast", { event: "heartbeat" }, ({ payload }) => applyBeat(payload))
+    .on("postgres_changes",
+        { event: "*", schema: "public", table: "feed_status" },
+        ({ new: row }) => applyBeat(row))
+    .on("postgres_changes",
+        { event: "*", schema: "public", table: "live_signal" },
+        ({ new: row }) => {
+          if (!row || !row.sent_at) return;
+          if (!current || Number(row.sent_at) > Number(current.sent_at || 0)) show(row);
+        })
+    .subscribe((status) => {
+      if (status === "SUBSCRIBED") pullState();
+    });
+}
+
+connect();
+pullState();
+
+// Watchdog. A silent socket is indistinguishable from a quiet market from
+// the outside, so rebuild rather than sit there showing a red dot.
+setInterval(() => {
+  const beatAge = lastBeat ? now() - lastBeat : Infinity;
+  const sinceRebuild = now() - lastRebuild;
+  if (beatAge > 25 && sinceRebuild > 15) connect();
+}, 5000);
+
+// Coming back from the background is the common case on a phone: the socket
+// is usually already dead, and the screen is stale.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  pullState();
+  if (!lastBeat || now() - lastBeat > 15) connect();
+});
+
+window.addEventListener("online", () => { connect(); pullState(); });
 
 /* ---------------------------------------------------------------------
    Notifications
