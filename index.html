@@ -638,9 +638,9 @@ a.card{display:block;color:inherit}
 /* =======================================================================
    CONFIG — replace these three values, then deploy.
    ======================================================================= */
-const SUPABASE_URL  = "https://iwlhawbdvnqledgppeyw.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bGhhd2Jkdm5xbGVkZ3BwZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMDEwMDYsImV4cCI6MjEwMTc3NzAwNn0.KZNdJqlLOkNytaX2e-NfdDakvqYs9zyxlmEbgZdr69Q";
-const VAPID_PUBLIC  = "BM83ph4iJnym10fZCKXkWGmQfg1T4_Ip92T0S80NPrDDkdTRrbiiw0g1KgldkYP9Uoldv_TF1UAWQS2MkZaFmYE";
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON = "YOUR-ANON-KEY";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
 /* ===================================================================== */
 
 const $ = (id) => document.getElementById(id);
@@ -1296,8 +1296,42 @@ const { createClient }=await import("https://esm.sh/@supabase/supabase-js@2");
 const sb=createClient(SUPABASE_URL,SUPABASE_ANON,{realtime:{params:{eventsPerSecond:20}}});
 
 let current=null, lastBeat=0, lastAsset="", skew=0;
-const noteSkew=(s)=>{ if(s&&s.sent_at) skew=now()-Number(s.sent_at); };
-const anchorOf=(s)=> s&&s.sent_at ? Number(s.sent_at)+skew : now();
+let channelState="closed", lastPull=0, samples=[];
+
+/* Every timestamp the desk sends is on ITS clock. Phones disagree with it by
+   seconds to minutes. Each sample is inflated by transport delay and never
+   shortened by it, so the smallest sample is the closest to the true offset.
+   Measured from heartbeats as well as signals — otherwise a phone that has
+   not yet seen a trade reads the whole clock gap as "offline". */
+function noteClock(pcTime){
+  if(!pcTime) return;
+  samples.push(now()-Number(pcTime));
+  if(samples.length>15) samples.shift();
+  skew=Math.min(...samples);
+}
+const noteSkew=(s)=>{ if(s&&s.sent_at) noteClock(s.sent_at); };
+
+/* The desk's clock, tracked directly. Heartbeats arrive every 8s carrying
+   beat_at on the PC's clock; pairing that with the moment it landed here
+   gives a running estimate of what time it is AT THE DESK right now.
+   Everything about signal timing is measured against this, not against the
+   phone's own clock, so transport delay is subtracted instead of added. */
+let beatAt=0, beatRx=0;
+function serverNow(){
+  return beatAt ? beatAt + (now()-beatRx) : now()-skew;
+}
+
+/* Keys of signals already displayed this session. live_signal holds the last
+   signal indefinitely, so without this the next poll re-shows a trade that
+   already finished — a signal the tool is no longer giving. */
+const shown=new Set();
+/* Where this signal began on THIS phone's timeline: however long ago the
+   desk sent it, measured on the desk's clock. */
+function anchorOf(s){
+  if(!s||!s.sent_at) return now();
+  const age=serverNow()-Number(s.sent_at);
+  return now()-Math.max(0,age);
+}
 const endsAt=(s,at)=> at+Number(s.entry_in||0)+Number(s.trade_seconds||0);
 const setPhase=(v)=>document.documentElement.style.setProperty("--phase",`var(${v})`);
 const setDrain=(f)=>document.documentElement.style.setProperty("--drain",
@@ -1316,6 +1350,11 @@ function show(sig,anchor){
   el.fFrame.textContent=sig.timeframe||"—";
   el.fTrade.textContent=sig.trade_seconds?Math.round(sig.trade_seconds)+"s":"—";
   if(sig.asset){ lastAsset=sig.asset; el.asset.textContent=sig.asset; }
+
+  if(sig.signal_key){
+    shown.add(sig.signal_key);
+    if(shown.size>200) shown.delete(shown.values().next().value);
+  }
 
   el.idle.hidden=true; el.live.hidden=false; el.facts.hidden=false;
   document.documentElement.style.setProperty("--dir",
@@ -1375,6 +1414,8 @@ function restore(){
   try{
     const {sig,at}=JSON.parse(raw);
     if(sig&&now()<endsAt(sig,at)) show(sig,at); else forget();
+    // A refresh mid-trade re-shows it; anything finished is dropped, not
+    // resurrected on the next poll.
   }catch{ forget(); }
 }
 
@@ -1382,7 +1423,7 @@ function paintFeed(){
   const age=now()-skew-lastBeat;
   let label;
   if(!lastBeat){ el.dot.className="dot"; label="Connecting"; }
-  else if(age<30){ el.dot.className="dot live"; label="Live"; }
+  else if(age<45){ el.dot.className="dot live"; label="Live"; }
   else{
     el.dot.className="dot stale";
     const m=Math.floor(age/60);
@@ -1404,7 +1445,10 @@ function paintHome(){
 
 function applyBeat(row){
   if(!row) return;
-  lastBeat=Number(row.beat_at||0);
+  noteClock(row.beat_at);
+  const b=Number(row.beat_at||0);
+  if(b>beatAt){ beatAt=b; beatRx=now(); }   // only ever move forward
+  lastBeat=b;
   if(row.asset&&row.asset!==lastAsset){
     lastAsset=row.asset; el.asset.textContent=row.asset;
     if(current){ forget(); clear(); }
@@ -1414,15 +1458,28 @@ function applyBeat(row){
 
 function applySignal(sig){
   if(!sig||!sig.sent_at) return;
-  if(current&&current.signal_key===sig.signal_key) return;
+
+  // Already displayed once. Never show the same trade twice — this is what
+  // stops a finished signal reappearing on the next poll.
+  if(sig.signal_key && shown.has(sig.signal_key)) return;
+
+  // Belongs to a pair the tool has moved on from.
   if(lastAsset&&sig.asset&&sig.asset!==lastAsset) return;
-  const at=anchorOf(sig);
-  if(now()>=endsAt(sig,at)) return;
-  show(sig,at);
+
+  const total=Number(sig.entry_in||0)+Number(sig.trade_seconds||0);
+  const age=serverNow()-Number(sig.sent_at);
+
+  // Sent in the future, or already over. Either way the tool is not showing
+  // it, so neither do we. The 2s tolerance covers ordinary clock jitter.
+  if(age<-2 || age>=total) return;
+
+  show(sig, now()-Math.max(0,age));
 }
 
 let channel=null,lastRebuild=0;
+
 async function pullState(){
+  lastPull=now();
   try{
     const [beat,live]=await Promise.all([
       sb.from("feed_status").select("*").eq("id",1).maybeSingle(),
@@ -1430,28 +1487,48 @@ async function pullState(){
     ]);
     applyBeat(beat.data);
     if(live.data) applySignal(live.data);
-  }catch{}
+    return true;
+  }catch{ return false; }
 }
+
 function connect(){
   lastRebuild=now();
+  channelState="connecting";
   if(channel){ try{ sb.removeChannel(channel); }catch{} }
   channel=sb.channel("star-trader")
     .on("broadcast",{event:"signal"},({payload})=>{ noteSkew(payload); applySignal(payload); })
     .on("broadcast",{event:"heartbeat"},({payload})=>applyBeat(payload))
     .on("postgres_changes",{event:"*",schema:"public",table:"feed_status"},({new:r})=>applyBeat(r))
     .on("postgres_changes",{event:"*",schema:"public",table:"live_signal"},({new:r})=>applySignal(r))
-    .subscribe((s)=>{ if(s==="SUBSCRIBED") pullState(); });
+    .subscribe((s)=>{ channelState=s; if(s==="SUBSCRIBED") pullState(); });
 }
+
+/* Rebuild a dead socket. This runs even when no beat has EVER arrived —
+   previously a phone that failed its first connection was never retried, so
+   it sat on "Connecting" forever. */
 setInterval(()=>{
   const age=now()-skew-lastBeat;
-  if(lastBeat&&age>25&&now()-lastRebuild>15) connect();
+  const stale = !lastBeat || age>25;
+  if(stale && now()-lastRebuild>15) connect();
 },5000);
+
+/* Plain HTTP fallback. Some mobile carriers and corporate Wi-Fi drop
+   WebSockets outright; those users would show offline forever while the desk
+   ran fine. Polling the same two rows keeps status and live trades correct
+   without a socket. It idles while the socket is healthy and beats are
+   arriving, so it costs nothing in the normal case. */
+setInterval(()=>{
+  const age=now()-skew-lastBeat;
+  const healthy = channelState==="SUBSCRIBED" && lastBeat && age<20;
+  if(!healthy && now()-lastPull>9) pullState();
+},4000);
+
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState!=="visible") return;
   pullState();
   if(now()-lastRebuild>10) connect();
 });
-addEventListener("online",connect);
+addEventListener("online",()=>{ pullState(); connect(); });
 addEventListener("pageshow",pullState);
 
 /* =======================================================================
@@ -1531,7 +1608,8 @@ $("jDate").value=iso(new Date());
 loadSim(); loadJournal();
 paintSessions(); homeVerse(); nextVerse();
 calcRisk(); drawPattern(); drawSim(); paintJournal();
-clear(); restore(); connect();
+clear(); restore();
+pullState(); connect();   // status first, socket second — a refresh shows Live at once
 route();
 addEventListener("resize",()=>{ if(location.hash.includes("patterns")) drawPattern();
   if(location.hash.includes("sim")) drawSim();
