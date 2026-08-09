@@ -259,6 +259,66 @@ input.f:focus{outline:none;border-color:var(--flame)}
 .setup{margin:auto;padding:24px;max-width:34ch;font-size:13px;line-height:1.6;color:var(--dim)}
 .setup code{color:var(--brand);font-size:12px}
 
+
+/* ---- new page furniture ---- */
+.curve{width:100%;display:block;margin-top:16px;border:1px solid var(--edge);border-radius:3px;background:color-mix(in srgb,var(--panel) 70%,transparent)}
+.candles{width:100%;display:block;margin-bottom:16px;border:1px solid var(--edge);border-radius:3px;background:color-mix(in srgb,var(--panel) 70%,transparent)}
+
+.verdict{padding:14px;border-radius:3px;font-size:12.5px;line-height:1.6;margin:4px 0 16px;border-left:2px solid var(--dim);background:rgba(255,255,255,.03)}
+.verdict.good{border-left-color:var(--rise)}
+.verdict.warn{border-left-color:#FFC24B}
+.verdict.bad{border-left-color:var(--fall)}
+
+.rowbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.btn--buy{border-color:color-mix(in srgb,var(--rise) 50%,transparent);color:var(--rise)}
+.btn--sell{border-color:color-mix(in srgb,var(--fall) 50%,transparent);color:var(--fall)}
+
+.simmsg{font-size:13px;line-height:1.6;color:var(--dim);text-align:center;min-height:38px}
+.simmsg.good{color:var(--rise)}
+.simmsg.bad{color:var(--fall)}
+
+.seg{display:flex;gap:8px;margin-top:12px}
+.seg button{
+  flex:1;background:var(--panel);border:1px solid var(--edge);color:var(--dim);
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  padding:12px 4px;border-radius:3px;cursor:pointer;
+}
+.seg button.on{border-color:var(--brand);color:var(--text)}
+
+.weeknav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.weeknav .wk{width:48px;flex:0 0 auto;padding:12px 0;font-size:16px}
+.wklabel{flex:1;text-align:center;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+
+.trade{position:relative;border:1px solid var(--edge);border-left-width:2px;border-radius:3px;padding:13px 40px 13px 13px;margin-top:10px;background:color-mix(in srgb,var(--panel) 80%,transparent)}
+.trade.win{border-left-color:var(--rise)}
+.trade.loss{border-left-color:var(--fall)}
+.trade.draw{border-left-color:var(--dim)}
+.trade__top{display:flex;align-items:baseline;gap:9px}
+.trade__dir{font-size:11px;letter-spacing:.14em;font-weight:600}
+.trade__dir.up{color:var(--rise)} .trade__dir.down{color:var(--fall)}
+.trade__pair{flex:1;font-size:13px}
+.trade__pnl{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.trade__sub{font-size:11px;color:var(--dim);margin-top:5px;line-height:1.5}
+.trade__x{position:absolute;top:8px;right:8px;width:28px;height:28px;background:none;border:0;color:var(--dim);font-size:19px;cursor:pointer}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.chip{
+  background:var(--panel);border:1px solid var(--edge);color:var(--dim);
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  padding:9px 13px;border-radius:999px;cursor:pointer;
+}
+.chip.on{border-color:var(--brand);color:var(--brand)}
+
+.bigverse{
+  padding:26px 20px;border-left:2px solid var(--flame);border-radius:3px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--flame) 12%,transparent),transparent);
+  margin-bottom:18px;
+}
+.bigverse p{font-family:var(--display);font-weight:600;font-size:19px;line-height:1.45;letter-spacing:-.01em}
+.bigverse cite{display:block;margin-top:14px;font-family:var(--mono);font-style:normal;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--flame-hot)}
+
+a.card{display:block;color:inherit}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -277,12 +337,23 @@ input.f:focus{outline:none;border-color:var(--flame)}
     <div class="nav__group" id="grpTools">
       <button type="button">Trading tools</button>
       <div class="nav__sub">
-        <a href="#/stake" data-route="stake">Stake calculator</a>
+        <a href="#/risk" data-route="risk">Risk calculator</a>
         <a href="#/sessions" data-route="sessions">Session clock</a>
-        <a href="#/streak" data-route="streak">Risk of ruin</a>
+        <a href="#/sim" data-route="sim">Trade simulator</a>
       </div>
     </div>
 
+    <div class="nav__group" id="grpLearn">
+      <button type="button">Learn to trade</button>
+      <div class="nav__sub">
+        <a href="#/patterns" data-route="patterns">Candle patterns</a>
+        <a href="#/basics" data-route="basics">Trading basics</a>
+      </div>
+    </div>
+
+    <div class="nav__sep"></div>
+    <a href="#/journal" data-route="journal">Trade journal</a>
+    <a href="#/bible" data-route="bible">Mini Bible</a>
     <div class="nav__sep"></div>
     <a href="#/alerts" data-route="alerts">Alerts &amp; setup</a>
   </div>
@@ -326,9 +397,22 @@ input.f:focus{outline:none;border-color:var(--flame)}
 
       <a class="cta" href="#/signals">Open live signals</a>
 
+      <div class="grid2" style="margin-top:12px">
+        <a class="card" href="#/journal" style="text-decoration:none;margin:0">
+          <div class="card__k">This week</div>
+          <div class="card__v" id="hWeek" style="font-size:19px">—</div>
+          <div class="card__note" id="hWeekN">No trades logged.</div>
+        </a>
+        <a class="card" href="#/sim" style="text-decoration:none;margin:0">
+          <div class="card__k">Practice</div>
+          <div class="card__v" style="font-size:19px">Simulator</div>
+          <div class="card__note">Read candles with nothing at stake.</div>
+        </a>
+      </div>
+
       <div class="verse">
-        He will baptise you with the Holy Spirit and with fire.
-        <cite>Matthew 3:11</cite>
+        <span id="hVerse">He shall baptize you with the Holy Ghost, and with fire.</span>
+        <cite id="hVerseRef">Matthew 3:11</cite>
       </div>
     </div>
   </section>
@@ -340,8 +424,8 @@ input.f:focus{outline:none;border-color:var(--flame)}
 
       <div id="live" hidden>
         <p class="eyebrow" id="eyebrow"></p>
-        <p class="call" id="call"></p>
         <p class="clock"><span id="clockNum">0</span><span class="clock__unit">s</span></p>
+        <p class="call" id="call"></p>
         <p class="reason" id="reason"></p>
       </div>
 
@@ -354,23 +438,34 @@ input.f:focus{outline:none;border-color:var(--flame)}
     </main>
   </section>
 
-  <!-- ===================== STAKE ===================== -->
-  <section class="page" id="p-stake">
+  <!-- ===================== RISK ===================== -->
+  <section class="page" id="p-risk">
     <div class="scroll">
-      <h2 class="ph">Stake calculator</h2>
-      <p class="pd">Binary payouts are asymmetric — a loss costs the whole stake while a win returns only the payout. Size from what you're willing to lose, not what you hope to make.</p>
+      <h2 class="ph">Risk calculator</h2>
+      <p class="pd">Binary payouts are lopsided: a loss takes the whole stake, a win returns only the payout. This works out whether your edge survives that, and what it does to the account over time.</p>
 
-      <label class="f"><span>Account balance</span><input class="f" id="sBal" type="number" inputmode="decimal" value="1000"></label>
-      <label class="f"><span>Risk per trade (%)</span><input class="f" id="sRisk" type="number" inputmode="decimal" value="2"></label>
-      <label class="f"><span>Payout (%)</span><input class="f" id="sPay" type="number" inputmode="decimal" value="80"></label>
+      <div class="grid2" style="gap:10px">
+        <label class="f"><span>Balance</span><input class="f" id="kBal" type="number" inputmode="decimal" value="1000"></label>
+        <label class="f"><span>Risk per trade %</span><input class="f" id="kRisk" type="number" inputmode="decimal" value="2"></label>
+        <label class="f"><span>Payout %</span><input class="f" id="kPay" type="number" inputmode="decimal" value="80"></label>
+        <label class="f"><span>Your win rate %</span><input class="f" id="kWin" type="number" inputmode="decimal" value="65"></label>
+      </div>
+
+      <div class="verdict" id="kVerdict"></div>
 
       <div class="out">
-        <div><div class="k">Stake</div><div class="v" id="sStake">—</div></div>
-        <div><div class="k">Win returns</div><div class="v" id="sWin">—</div></div>
-        <div><div class="k">Loss costs</div><div class="v" id="sLoss">—</div></div>
-        <div><div class="k">Break-even win rate</div><div class="v" id="sBE">—</div></div>
+        <div><div class="k">Stake</div><div class="v" id="kStake">—</div></div>
+        <div><div class="k">Break-even win rate</div><div class="v" id="kBE">—</div></div>
+        <div><div class="k">Edge per trade</div><div class="v" id="kEdge">—</div></div>
+        <div><div class="k">Expected per trade</div><div class="v" id="kEV">—</div></div>
+        <div><div class="k">Likely worst streak (100)</div><div class="v" id="kStreak">—</div></div>
+        <div><div class="k">Drawdown from it</div><div class="v" id="kDD">—</div></div>
+        <div><div class="k">Kelly says risk</div><div class="v" id="kKelly">—</div></div>
+        <div><div class="k">After 100 trades</div><div class="v" id="kProj">—</div></div>
       </div>
-      <p class="pd" style="margin-top:14px" id="sNote"></p>
+
+      <canvas id="kCurve" class="curve"></canvas>
+      <p class="pd" id="kNote" style="margin-top:12px"></p>
     </div>
   </section>
 
@@ -378,7 +473,7 @@ input.f:focus{outline:none;border-color:var(--flame)}
   <section class="page" id="p-sessions">
     <div class="scroll">
       <h2 class="ph">Session clock</h2>
-      <p class="pd">OTC pairs run around the clock, but liquidity and behaviour still track the majors. Overlaps are where movement concentrates.</p>
+      <p class="pd">OTC pairs run around the clock, but liquidity still tracks the majors. Overlaps carry the heaviest flow.</p>
       <div id="sesList"></div>
       <div class="card" style="margin-top:20px">
         <div class="card__k">Your local time</div>
@@ -388,23 +483,138 @@ input.f:focus{outline:none;border-color:var(--flame)}
     </div>
   </section>
 
-  <!-- ===================== RISK OF RUIN ===================== -->
-  <section class="page" id="p-streak">
+  <!-- ===================== PATTERNS ===================== -->
+  <section class="page" id="p-patterns">
     <div class="scroll">
-      <h2 class="ph">Risk of ruin</h2>
-      <p class="pd">Losing streaks are longer than intuition suggests. This shows how deep a drawdown to expect before it happens, not after.</p>
+      <h2 class="ph">Candle patterns</h2>
+      <p class="pd">Every pattern below is drawn to scale. Learn the shape first, then what it implies — and where it fails.</p>
 
-      <label class="f"><span>Win rate (%)</span><input class="f" id="rWin" type="number" inputmode="decimal" value="60"></label>
-      <label class="f"><span>Risk per trade (%)</span><input class="f" id="rRisk" type="number" inputmode="decimal" value="2"></label>
-      <label class="f"><span>Trades planned</span><input class="f" id="rN" type="number" inputmode="numeric" value="200"></label>
+      <canvas id="patCanvas" class="candles"></canvas>
 
-      <div class="out">
-        <div><div class="k">Likely worst streak</div><div class="v" id="rStreak">—</div></div>
-        <div><div class="k">Drawdown from it</div><div class="v" id="rDD">—</div></div>
-        <div><div class="k">Chance of 10 in a row</div><div class="v" id="r10">—</div></div>
-        <div><div class="k">Payout needed to break even</div><div class="v" id="rPay">—</div></div>
+      <div class="card">
+        <div class="card__k" id="patKind">—</div>
+        <div class="card__v" id="patName" style="font-size:21px">—</div>
+        <div class="card__note" id="patWhat"></div>
       </div>
-      <p class="pd" style="margin-top:14px" id="rNote"></p>
+
+      <div class="card">
+        <div class="card__k">What it suggests</div>
+        <div class="card__note" id="patMean" style="margin-top:0"></div>
+      </div>
+
+      <div class="card" style="border-color:color-mix(in srgb,var(--fall) 35%,var(--edge))">
+        <div class="card__k" style="color:var(--fall)">Where it fails</div>
+        <div class="card__note" id="patFail" style="margin-top:0"></div>
+      </div>
+
+      <div class="rowbtns">
+        <button class="btn" id="patPrev">Back</button>
+        <button class="btn" id="patNext">Next</button>
+      </div>
+      <p class="hint" id="patCount" style="margin-top:12px"></p>
+    </div>
+  </section>
+
+  <!-- ===================== BASICS ===================== -->
+  <section class="page" id="p-basics">
+    <div class="scroll">
+      <h2 class="ph">Trading basics</h2>
+      <p class="pd">Short lessons, in the order they actually matter.</p>
+      <div id="lessons"></div>
+    </div>
+  </section>
+
+  <!-- ===================== SIMULATOR ===================== -->
+  <section class="page" id="p-sim">
+    <div class="scroll">
+      <h2 class="ph">Trade simulator</h2>
+      <p class="pd">Read the last candles and call the next one. Nothing at stake but your average.</p>
+
+      <canvas id="simCanvas" class="candles"></canvas>
+
+      <div class="out" style="margin-bottom:14px">
+        <div><div class="k">Balance</div><div class="v" id="simBal">—</div></div>
+        <div><div class="k">Win rate</div><div class="v" id="simWR">—</div></div>
+        <div><div class="k">Record</div><div class="v" id="simRec">0–0</div></div>
+        <div><div class="k">Streak</div><div class="v" id="simStreak">—</div></div>
+      </div>
+
+      <p class="simmsg" id="simMsg">Call the next candle.</p>
+
+      <div class="rowbtns">
+        <button class="btn btn--buy" id="simUp">Buy</button>
+        <button class="btn btn--sell" id="simDown">Sell</button>
+      </div>
+      <button class="btn" id="simReset" style="margin-top:10px">Reset practice</button>
+    </div>
+  </section>
+
+  <!-- ===================== JOURNAL ===================== -->
+  <section class="page" id="p-journal">
+    <div class="scroll">
+      <h2 class="ph">Trade journal</h2>
+      <p class="pd">Stored on this device only, as JSON. Nothing is uploaded and nobody else can see it.</p>
+
+      <div class="weeknav">
+        <button class="btn wk" id="wkPrev">‹</button>
+        <div class="wklabel" id="wkLabel">—</div>
+        <button class="btn wk" id="wkNext">›</button>
+      </div>
+
+      <div class="out" style="margin-bottom:16px">
+        <div><div class="k">Trades</div><div class="v" id="jN">0</div></div>
+        <div><div class="k">Win rate</div><div class="v" id="jWR">—</div></div>
+        <div><div class="k">Net</div><div class="v" id="jNet">$0.00</div></div>
+        <div><div class="k">Best day</div><div class="v" id="jBest">—</div></div>
+      </div>
+
+      <canvas id="jChart" class="curve"></canvas>
+
+      <div class="card">
+        <div class="card__k">Log a trade</div>
+        <div class="grid2" style="gap:10px;margin-top:12px">
+          <label class="f"><span>Date</span><input class="f" id="jDate" type="date"></label>
+          <label class="f"><span>Pair</span><input class="f" id="jPair" type="text" placeholder="AUD/CAD OTC"></label>
+          <label class="f"><span>Stake</span><input class="f" id="jStake" type="number" inputmode="decimal" value="20"></label>
+          <label class="f"><span>Payout %</span><input class="f" id="jPay" type="number" inputmode="decimal" value="80"></label>
+        </div>
+        <div class="seg" id="jDir">
+          <button data-v="BUY" class="on">Buy</button>
+          <button data-v="SELL">Sell</button>
+        </div>
+        <div class="seg" id="jRes">
+          <button data-v="win" class="on">Win</button>
+          <button data-v="loss">Loss</button>
+          <button data-v="draw">Refund</button>
+        </div>
+        <label class="f" style="margin-top:12px"><span>Note</span><input class="f" id="jNote" type="text" placeholder="Why you took it"></label>
+        <button class="btn" id="jAdd">Add trade</button>
+      </div>
+
+      <div id="jList"></div>
+
+      <div class="rowbtns" style="margin-top:16px">
+        <button class="btn" id="jExport">Export JSON</button>
+        <button class="btn" id="jWipe">Erase all</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== BIBLE ===================== -->
+  <section class="page" id="p-bible">
+    <div class="scroll">
+      <h2 class="ph">Mini Bible</h2>
+      <p class="pd">King James Version. Pick what you need right now.</p>
+
+      <div class="chips" id="bChips"></div>
+
+      <div class="bigverse">
+        <p id="bText">—</p>
+        <cite id="bRef">—</cite>
+      </div>
+
+      <button class="btn" id="bNext">Another verse</button>
+      <p class="hint" style="margin-top:14px">Verses are stored in this file. No connection needed.</p>
     </div>
   </section>
 
@@ -428,273 +638,644 @@ input.f:focus{outline:none;border-color:var(--flame)}
 /* =======================================================================
    CONFIG — replace these three values, then deploy.
    ======================================================================= */
-const SUPABASE_URL  = "https://iwlhawbdvnqledgppeyw.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bGhhd2Jkdm5xbGVkZ3BwZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMDEwMDYsImV4cCI6MjEwMTc3NzAwNn0.KZNdJqlLOkNytaX2e-NfdDakvqYs9zyxlmEbgZdr69Q";
-const VAPID_PUBLIC  = "BM83ph4iJnym10fZCKXkWGmQfg1T4_Ip92T0S80NPrDDkdTRrbiiw0g1KgldkYP9Uoldv_TF1UAWQS2MkZaFmYE";
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON = "YOUR-ANON-KEY";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
 /* ===================================================================== */
 
 const $ = (id) => document.getElementById(id);
 const now = () => Date.now() / 1000;
+const money = (n) => (n < 0 ? "−$" : "$") + Math.abs(n).toLocaleString(undefined,
+  { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const numv = (id) => parseFloat($(id).value) || 0;
 
 /* =======================================================================
-   FLAMES — blue-into-black, drifting upward. Canvas because a few hundred
-   soft additive sprites stay smooth where that many DOM nodes would not.
+   FLAMES — blue into black, rising from a burning base.
    ======================================================================= */
 (function flames(){
   const cv = $("flames"), ctx = cv.getContext("2d");
-  let W = 0, H = 0, dpr = 1, parts = [], bolts = [], raf = 0;
-
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W=0,H=0,dpr=1,parts=[],bolts=[],raf=0,t0=0;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function size(){
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = Math.min(devicePixelRatio||1, 2);
     W = cv.clientWidth; H = cv.clientHeight;
-    cv.width = W * dpr; cv.height = H * dpr;
+    cv.width = W*dpr; cv.height = H*dpr;
     ctx.setTransform(dpr,0,0,dpr,0,0);
   }
-
-  function seed(){
-    // Columns of flame spread across the base so it reads as a wall of fire
-    // rather than one central plume.
-    parts = [];
-    const count = Math.round(Math.min(220, W / 2.2));
-    for (let i=0;i<count;i++) parts.push(newPart(H - Math.random()*H*0.9));
-    bolts = [];
-    for (let i=0;i<7;i++) bolts.push(newBolt(Math.random()*H));
-  }
-
   function newPart(y){
-    // Weighted toward the base so the fire has a body and licks upward,
-    // instead of an even haze across the whole screen.
     const reach = 0.34 + Math.random()*0.62;
-    return {
-      x: Math.random()*W,
-      y: y === undefined ? H + Math.random()*60 : y,
-      r: 10 + Math.random()*34,
-      v: 0.5 + Math.random()*1.5,
-      drift: (Math.random()-0.5)*0.5,
-      wob: Math.random()*Math.PI*2,
-      top: H * (1 - reach),
-      heat: Math.random(),
-    };
+    return { x:Math.random()*W, y: y===undefined ? H+Math.random()*60 : y,
+      r:10+Math.random()*34, v:0.5+Math.random()*1.5, drift:(Math.random()-0.5)*0.5,
+      wob:Math.random()*Math.PI*2, top:H*(1-reach), heat:Math.random() };
   }
-
   function newBolt(y){
-    return {
-      x: 20 + Math.random()*(W-40),
-      y: y === undefined ? H + 40 : y,
-      s: 9 + Math.random()*9,
-      v: 0.35 + Math.random()*0.5,
-      sway: Math.random()*Math.PI*2,
-      a: 0.25 + Math.random()*0.4,
-    };
+    return { x:20+Math.random()*(W-40), y: y===undefined ? H+40 : y,
+      s:9+Math.random()*9, v:0.35+Math.random()*0.5, sway:Math.random()*Math.PI*2,
+      a:0.25+Math.random()*0.4 };
   }
-
+  function seed(){
+    parts=[]; const n=Math.round(Math.min(220, W/2.2));
+    for(let i=0;i<n;i++) parts.push(newPart(H-Math.random()*H*0.9));
+    bolts=[]; for(let i=0;i<7;i++) bolts.push(newBolt(Math.random()*H));
+  }
   function drawBolt(b){
-    const s = b.s;
-    ctx.save();
-    ctx.translate(b.x + Math.sin(b.sway)*14, b.y);
-    ctx.globalAlpha = b.a;
-    ctx.fillStyle = "#8FD4FF";
-    ctx.shadowColor = "#2D6BFF";
-    ctx.shadowBlur = 14;
+    const s=b.s;
+    ctx.save(); ctx.translate(b.x+Math.sin(b.sway)*14, b.y);
+    ctx.globalAlpha=b.a; ctx.fillStyle="#8FD4FF";
+    ctx.shadowColor="#2D6BFF"; ctx.shadowBlur=14;
     ctx.beginPath();
-    ctx.moveTo(0.15*s, -s);
-    ctx.lineTo(-0.45*s, 0.15*s);
-    ctx.lineTo(-0.05*s, 0.15*s);
-    ctx.lineTo(-0.15*s, s);
-    ctx.lineTo(0.45*s, -0.15*s);
-    ctx.lineTo(0.05*s, -0.15*s);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
+    ctx.moveTo(.15*s,-s); ctx.lineTo(-.45*s,.15*s); ctx.lineTo(-.05*s,.15*s);
+    ctx.lineTo(-.15*s,s); ctx.lineTo(.45*s,-.15*s); ctx.lineTo(.05*s,-.15*s);
+    ctx.closePath(); ctx.fill(); ctx.restore();
   }
-
-  let t0 = 0;
-
   function frame(){
     ctx.clearRect(0,0,W,H);
-    ctx.globalCompositeOperation = "lighter";
+    ctx.globalCompositeOperation="lighter";
 
-    // The bed of the fire. Without it the licks read as drifting sparks
-    // instead of flame coming off something burning.
-    t0 += 0.016;
-    const bedH = H * 0.42;
-    const breathe = 0.85 + Math.sin(t0*0.8)*0.15;
-    const bed = ctx.createLinearGradient(0, H, 0, H - bedH);
-    bed.addColorStop(0,    `rgba(60,130,255,${(0.20*breathe).toFixed(3)})`);
-    bed.addColorStop(0.28, `rgba(38,90,220,${(0.10*breathe).toFixed(3)})`);
-    bed.addColorStop(1,    "rgba(4,6,15,0)");
-    ctx.fillStyle = bed;
-    ctx.fillRect(0, H - bedH, W, bedH);
+    // The bed of the fire — without it the licks read as drifting sparks.
+    t0+=0.016;
+    const bedH=H*0.42, breathe=0.85+Math.sin(t0*0.8)*0.15;
+    const bed=ctx.createLinearGradient(0,H,0,H-bedH);
+    bed.addColorStop(0,`rgba(60,130,255,${(0.20*breathe).toFixed(3)})`);
+    bed.addColorStop(0.28,`rgba(38,90,220,${(0.10*breathe).toFixed(3)})`);
+    bed.addColorStop(1,"rgba(4,6,15,0)");
+    ctx.fillStyle=bed; ctx.fillRect(0,H-bedH,W,bedH);
 
-    for (const p of parts){
-      p.y -= p.v;
-      p.wob += 0.05;
-      p.x += p.drift + Math.sin(p.wob) * 0.5;
-
-      // How far through its own climb this one is: bright and fat at the
-      // base, thin and faint as it burns out. Each has its own ceiling, so
-      // the flame edge is ragged rather than a flat band.
-      const span = H - p.top;
-      const prog = Math.min(1, Math.max(0, (H - p.y) / span));
-      const alpha = Math.min(1, prog*7) * Math.pow(1 - prog, 1.35);
-      if (alpha > 0.004){
-        const hot = p.heat * (1 - prog);
-        const rx = p.r * (1 - prog*0.55);
-        const ry = rx * 2.1;            // vertical stretch reads as a lick
-
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.scale(1, ry/rx);
-        // Built AFTER the transform and centred on the origin — a gradient
-        // made in page coordinates lands at double the offset once the
-        // context is translated, which makes it vanish off-screen.
-        const g = ctx.createRadialGradient(0,0,0,0,0,rx);
-        g.addColorStop(0,    `rgba(${Math.round(130+125*hot)},${Math.round(200+45*hot)},255,${(0.40*alpha).toFixed(3)})`);
-        g.addColorStop(0.40, `rgba(45,107,255,${(0.24*alpha).toFixed(3)})`);
-        g.addColorStop(1,    "rgba(4,6,15,0)");
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.arc(0, 0, rx, 0, Math.PI*2);
-        ctx.fill();
+    for(const p of parts){
+      p.y-=p.v; p.wob+=0.05; p.x+=p.drift+Math.sin(p.wob)*0.5;
+      const span=H-p.top;
+      const prog=Math.min(1,Math.max(0,(H-p.y)/span));
+      const alpha=Math.min(1,prog*7)*Math.pow(1-prog,1.35);
+      if(alpha>0.004){
+        const hot=p.heat*(1-prog), rx=p.r*(1-prog*0.55), ry=rx*2.1;
+        ctx.save(); ctx.translate(p.x,p.y); ctx.scale(1,ry/rx);
+        // Built after the transform: a gradient made in page coordinates
+        // lands at double the offset once translated, and vanishes.
+        const g=ctx.createRadialGradient(0,0,0,0,0,rx);
+        g.addColorStop(0,`rgba(${Math.round(130+125*hot)},${Math.round(200+45*hot)},255,${(0.40*alpha).toFixed(3)})`);
+        g.addColorStop(0.40,`rgba(45,107,255,${(0.24*alpha).toFixed(3)})`);
+        g.addColorStop(1,"rgba(4,6,15,0)");
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,rx,0,Math.PI*2); ctx.fill();
         ctx.restore();
       }
-
-      if (prog >= 1 || p.y < -p.r*2) Object.assign(p, newPart());
+      if(prog>=1||p.y<-p.r*2) Object.assign(p,newPart());
     }
-
-    ctx.globalCompositeOperation = "source-over";
-    for (const b of bolts){
-      b.y -= b.v;
-      b.sway += 0.012;
-      drawBolt(b);
-      if (b.y < -30) Object.assign(b, newBolt());
-    }
-
-    raf = requestAnimationFrame(frame);
+    ctx.globalCompositeOperation="source-over";
+    for(const b of bolts){ b.y-=b.v; b.sway+=0.012; drawBolt(b); if(b.y<-30) Object.assign(b,newBolt()); }
+    raf=requestAnimationFrame(frame);
   }
-
-  function start(){ if (!raf && !reduce) raf = requestAnimationFrame(frame); }
-  function stop(){ cancelAnimationFrame(raf); raf = 0; }
+  const start=()=>{ if(!raf&&!reduce) raf=requestAnimationFrame(frame); };
+  const stop =()=>{ cancelAnimationFrame(raf); raf=0; };
 
   size(); seed();
-  if (reduce) { frame(); stop(); } else start();
-
-  window.addEventListener("resize", () => { size(); seed(); });
-  // Don't burn battery animating a screen nobody is looking at.
-  document.addEventListener("visibilitychange", () =>
-    document.visibilityState === "visible" ? start() : stop());
+  if(reduce){ frame(); stop(); } else start();
+  addEventListener("resize",()=>{ size(); seed(); });
+  document.addEventListener("visibilitychange",()=>
+    document.visibilityState==="visible"?start():stop());
 })();
 
 /* =======================================================================
    ROUTER
    ======================================================================= */
-const ROUTES = ["home","signals","stake","sessions","streak","alerts"];
-const menu = $("menu"), scrim = $("scrim");
+const ROUTES = ["home","signals","risk","sessions","patterns","basics","sim","journal","bible","alerts"];
+const TOOLS  = ["risk","sessions","sim"];
+const LEARN  = ["patterns","basics"];
+const menu=$("menu"), scrim=$("scrim");
+const closeMenu=()=>{ menu.classList.remove("open"); scrim.classList.remove("open"); };
 
-function closeMenu(){ menu.classList.remove("open"); scrim.classList.remove("open"); }
-$("burger").addEventListener("click", () => {
-  const open = menu.classList.toggle("open");
-  scrim.classList.toggle("open", open);
+$("burger").addEventListener("click",()=>{
+  const o=menu.classList.toggle("open"); scrim.classList.toggle("open",o);
 });
-scrim.addEventListener("click", closeMenu);
-
-$("grpTools").querySelector("button").addEventListener("click", () =>
-  $("grpTools").classList.toggle("open"));
+scrim.addEventListener("click",closeMenu);
+document.querySelectorAll(".nav__group>button").forEach(b=>
+  b.addEventListener("click",()=>b.parentElement.classList.toggle("open")));
 
 function route(){
-  let r = (location.hash.replace("#/","") || "home");
-  if (!ROUTES.includes(r)) r = "home";
+  let r=(location.hash.replace("#/","")||"home");
+  if(!ROUTES.includes(r)) r="home";
+  for(const id of ROUTES) $("p-"+id).classList.toggle("active", id===r);
+  document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("active", a.dataset.route===r));
+  $("meter").hidden = r!=="signals";
+  if(TOOLS.includes(r)) $("grpTools").classList.add("open");
+  if(LEARN.includes(r)) $("grpLearn").classList.add("open");
 
-  for (const id of ROUTES) $("p-"+id).classList.toggle("active", id === r);
-  document.querySelectorAll(".nav a").forEach(a =>
-    a.classList.toggle("active", a.dataset.route === r));
-
-  // The drain meter belongs to the countdown, so it only shows with it.
-  $("meter").hidden = r !== "signals";
-  if (["stake","sessions","streak"].includes(r)) $("grpTools").classList.add("open");
+  // Canvases must be laid out before they can be sized, so draw on arrival.
+  if(r==="patterns") drawPattern();
+  if(r==="sim") drawSim();
+  if(r==="risk") calcRisk();
+  if(r==="journal") paintJournal();
   closeMenu();
 }
-window.addEventListener("hashchange", route);
+addEventListener("hashchange",route);
 
 /* =======================================================================
-   TOOLS
+   SHARED CANDLE RENDERER
    ======================================================================= */
-const money = (n) => "$" + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
-const num = (id) => parseFloat($(id).value) || 0;
-
-function calcStake(){
-  const bal = num("sBal"), risk = num("sRisk"), pay = num("sPay");
-  const stake = bal * risk / 100;
-  const win = stake * pay / 100;
-  $("sStake").textContent = money(stake);
-  $("sWin").textContent = "+" + money(win);
-  $("sLoss").textContent = "−" + money(stake);
-
-  // A win returns only the payout, a loss takes the stake, so break-even sits
-  // above 50% for any payout under 100%.
-  const be = pay > 0 ? 100 / (1 + pay/100) : 0;
-  $("sBE").textContent = be ? be.toFixed(1) + "%" : "—";
-  $("sNote").textContent = pay > 0
-    ? `At a ${pay}% payout you need better than ${be.toFixed(1)}% accuracy just to stand still. Every percentage point of payout you give up raises that bar.`
-    : "Enter the payout your broker is quoting for this asset.";
+function fitCanvas(cv, hCss){
+  const dpr=Math.min(devicePixelRatio||1,2);
+  const w=cv.clientWidth||cv.parentElement.clientWidth;
+  cv.style.height=hCss+"px";
+  cv.width=w*dpr; cv.height=hCss*dpr;
+  const ctx=cv.getContext("2d");
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return { ctx, w, h:hCss };
 }
-["sBal","sRisk","sPay"].forEach(id => $(id).addEventListener("input", calcStake));
 
-function calcRuin(){
-  const w = Math.min(99.9, Math.max(0.1, num("rWin"))) / 100;
-  const risk = num("rRisk") / 100;
-  const n = Math.max(1, num("rN"));
-  const l = 1 - w;
+function drawCandles(cv, candles, opts={}){
+  const { ctx,w,h } = fitCanvas(cv, opts.height||220);
+  ctx.clearRect(0,0,w,h);
+  if(!candles.length) return;
 
-  // Expected longest run of losses in n trials.
-  const streak = Math.max(1, Math.round(Math.log(n * l) / Math.log(1/l)));
-  const dd = (1 - Math.pow(1 - risk, streak)) * 100;
-  const ten = Math.pow(l, 10) * n * 100;
+  const pad=14;
+  const hi=Math.max(...candles.map(c=>c.h));
+  const lo=Math.min(...candles.map(c=>c.l));
+  const range=(hi-lo)||1;
+  const y=(v)=> pad + (hi-v)/range*(h-pad*2);
+  const slot=(w-pad*2)/candles.length;
+  const bw=Math.min(slot*0.62, 26);
 
-  $("rStreak").textContent = streak + " losses";
-  $("rDD").textContent = dd.toFixed(1) + "%";
-  $("r10").textContent = Math.min(100, ten).toFixed(1) + "%";
-  $("rPay").textContent = w > 0 ? ((1/w - 1) * 100).toFixed(0) + "%" : "—";
-  $("rNote").textContent =
-    `Across ${n} trades at ${(w*100).toFixed(0)}% accuracy, a run of about ${streak} straight losses is the expected outcome — not the worst case. Risking ${(risk*100).toFixed(1)}% each time, that run costs roughly ${dd.toFixed(1)}% of the account.`;
+  candles.forEach((c,i)=>{
+    const cx=pad+slot*i+slot/2;
+    const up=c.c>=c.o;
+    const col = up ? "#34E5A0" : "#FF3D6E";
+    ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(cx,y(c.h)); ctx.lineTo(cx,y(c.l)); ctx.stroke();
+    const top=y(Math.max(c.o,c.c));
+    const bh=Math.max(2, Math.abs(y(c.o)-y(c.c)));
+    ctx.fillRect(cx-bw/2, top, bw, bh);
+  });
+
+  if(opts.markLast){
+    const cx=pad+slot*(candles.length-1)+slot/2;
+    ctx.strokeStyle="rgba(201,59,232,.55)"; ctx.setLineDash([3,4]);
+    ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,h); ctx.stroke();
+    ctx.setLineDash([]);
+  }
 }
-["rWin","rRisk","rN"].forEach(id => $(id).addEventListener("input", calcRuin));
 
-const SESSIONS = [
-  { n:"Sydney", o:21, c:6  },
-  { n:"Tokyo",  o:0,  c:9  },
-  { n:"London", o:7,  c:16 },
-  { n:"New York", o:12, c:21 },
+/* =======================================================================
+   RISK CALCULATOR
+   ======================================================================= */
+function calcRisk(){
+  const bal=numv("kBal"), riskPct=numv("kRisk")/100;
+  const pay=numv("kPay")/100, win=Math.min(0.999,Math.max(0.001,numv("kWin")/100));
+  const stake=bal*riskPct;
+  const be = pay>0 ? 1/(1+pay) : 1;              // win rate that breaks even
+  const ev = win*stake*pay - (1-win)*stake;      // expected value per trade
+  const edge = win*pay - (1-win);                // per unit staked
+
+  // Kelly for a binary payout: what fraction of the bankroll maximises growth.
+  const kelly = pay>0 ? Math.max(0,(win*(1+pay)-1)/pay) : 0;
+
+  const l=1-win;
+  const streak=Math.max(1, Math.round(Math.log(100*l)/Math.log(1/l)));
+  const dd=(1-Math.pow(1-riskPct,streak))*100;
+
+  $("kStake").textContent=money(stake);
+  $("kBE").textContent=(be*100).toFixed(1)+"%";
+  $("kEdge").textContent=(edge*100).toFixed(1)+"%";
+  $("kEV").textContent=money(ev);
+  $("kStreak").textContent=streak+" losses";
+  $("kDD").textContent=dd.toFixed(1)+"%";
+  $("kKelly").textContent=(kelly*100).toFixed(1)+"%";
+
+  // Compound the expected outcome forward, sizing off the running balance.
+  let b=bal; const curve=[b];
+  for(let i=0;i<100;i++){ b += b*riskPct*edge; curve.push(b); }
+  $("kProj").textContent=money(b);
+
+  const v=$("kVerdict");
+  if(edge<=0){
+    v.className="verdict bad";
+    v.textContent=`No edge. At a ${(pay*100).toFixed(0)}% payout you need above ${(be*100).toFixed(1)}% accuracy, and ${(win*100).toFixed(0)}% is below that. Every trade loses money on average.`;
+  } else if(kelly < riskPct){
+    v.className="verdict warn";
+    v.textContent=`Edge is real but you're oversized. Kelly caps this at ${(kelly*100).toFixed(1)}% per trade and you're risking ${(riskPct*100).toFixed(1)}%. Beyond the cap, more risk lowers long-run growth.`;
+  } else {
+    v.className="verdict good";
+    v.textContent=`Positive edge of ${(edge*100).toFixed(1)}% per unit staked, and your sizing sits inside the Kelly cap of ${(kelly*100).toFixed(1)}%.`;
+  }
+
+  $("kNote").textContent =
+    `Expect a run of about ${streak} straight losses somewhere in 100 trades — that is the ordinary outcome, not the bad one. At ${(riskPct*100).toFixed(1)}% per trade it costs roughly ${dd.toFixed(1)}% of the account, so the question is whether you would keep following the plan through it.`;
+
+  drawCurve(curve);
+}
+["kBal","kRisk","kPay","kWin"].forEach(id=>$(id).addEventListener("input",calcRisk));
+
+function drawCurve(series){
+  const cv=$("kCurve"); const { ctx,w,h }=fitCanvas(cv,150);
+  ctx.clearRect(0,0,w,h);
+  const hi=Math.max(...series), lo=Math.min(...series), r=(hi-lo)||1, pad=10;
+  const x=(i)=>pad+i/(series.length-1)*(w-pad*2);
+  const y=(v)=>pad+(hi-v)/r*(h-pad*2);
+  const rising=series[series.length-1]>=series[0];
+  const col=rising?"#34E5A0":"#FF3D6E";
+
+  const g=ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0, col.replace(")",",.28)").replace("#","rgba(").length? col+"47":col);
+  ctx.beginPath(); ctx.moveTo(x(0),y(series[0]));
+  series.forEach((v,i)=>ctx.lineTo(x(i),y(v)));
+  ctx.lineTo(x(series.length-1),h); ctx.lineTo(x(0),h); ctx.closePath();
+  ctx.fillStyle=col+"22"; ctx.fill();
+
+  ctx.beginPath(); ctx.moveTo(x(0),y(series[0]));
+  series.forEach((v,i)=>ctx.lineTo(x(i),y(v)));
+  ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
+}
+
+/* =======================================================================
+   SESSIONS
+   ======================================================================= */
+const SESSIONS=[
+  {n:"Sydney",o:21,c:6},{n:"Tokyo",o:0,c:9},
+  {n:"London",o:7,c:16},{n:"New York",o:12,c:21},
 ];
-
 function paintSessions(){
-  const d = new Date();
-  const h = d.getUTCHours() + d.getUTCMinutes()/60;
-  const open = (s) => s.o < s.c ? (h >= s.o && h < s.c) : (h >= s.o || h < s.c);
-
-  $("sesList").innerHTML = SESSIONS.map(s => `
-    <div class="ses">
-      <span class="ses__n">${s.n}</span>
-      <span class="ses__t">${String(s.o).padStart(2,"0")}:00–${String(s.c).padStart(2,"0")}:00 UTC</span>
-      <span class="pill ${open(s)?"on":""}">${open(s)?"Open":"Closed"}</span>
-    </div>`).join("");
-
-  $("localTime").textContent = d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
-  const live = SESSIONS.filter(open).map(s => s.n);
-  $("overlapNote").textContent = live.length > 1
-    ? `${live.join(" and ")} are both open — overlaps carry the heaviest flow of the day.`
-    : live.length === 1
-      ? `${live[0]} only. Thinner conditions than an overlap.`
-      : "Between sessions. The quietest stretch of the clock.";
+  const d=new Date(), h=d.getUTCHours()+d.getUTCMinutes()/60;
+  const open=(s)=> s.o<s.c ? (h>=s.o&&h<s.c) : (h>=s.o||h<s.c);
+  $("sesList").innerHTML=SESSIONS.map(s=>`
+    <div class="ses"><span class="ses__n">${s.n}</span>
+    <span class="ses__t">${String(s.o).padStart(2,"0")}:00–${String(s.c).padStart(2,"0")}:00 UTC</span>
+    <span class="pill ${open(s)?"on":""}">${open(s)?"Open":"Closed"}</span></div>`).join("");
+  $("localTime").textContent=d.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+  const live=SESSIONS.filter(open).map(s=>s.n);
+  $("overlapNote").textContent = live.length>1
+    ? `${live.join(" and ")} are both open — overlaps carry the heaviest flow.`
+    : live.length===1 ? `${live[0]} only. Thinner than an overlap.`
+    : "Between sessions. The quietest stretch of the clock.";
 }
-setInterval(paintSessions, 15000);
+setInterval(paintSessions,15000);
 
 /* =======================================================================
-   SIGNAL FEED — unchanged behaviour, now living on its own page
+   CANDLE PATTERNS
    ======================================================================= */
-const el = {
+const C=(o,h,l,c)=>({o,h,l,c});
+const PATTERNS=[
+  { name:"Bullish engulfing", kind:"Reversal · bullish",
+    candles:[C(52,53,46,47),C(46,58,45,57),C(57,60,55,59)],
+    what:"A down candle followed by an up candle whose body swallows it whole.",
+    mean:"Sellers controlled one candle and buyers took all of it back plus more. The bigger the engulfing body relative to recent ones, the more it matters.",
+    fail:"Inside a downtrend it's often just a pullback. It carries weight at the end of an extended move down, not in the middle of one." },
+  { name:"Bearish engulfing", kind:"Reversal · bearish",
+    candles:[C(46,54,45,53),C(54,55,42,43),C(43,45,40,41)],
+    what:"An up candle followed by a down candle whose body covers it entirely.",
+    mean:"Buyers pushed, then lost the whole move within one candle. Strongest after a run up into an obvious level.",
+    fail:"In a strong uptrend this often marks a pause, not a top. Without a level overhead, it is noise." },
+  { name:"Hammer", kind:"Reversal · bullish",
+    candles:[C(56,57,50,51),C(50,52,41,50),C(50,55,49,54)],
+    what:"A small body at the top with a lower wick at least twice the body.",
+    mean:"Price was pushed well down and rejected hard before the close. The long wick is the whole signal.",
+    fail:"A hammer in mid-air means little. It needs to be rejecting something — a prior low, a round number, a level that already mattered." },
+  { name:"Shooting star", kind:"Reversal · bearish",
+    candles:[C(44,50,43,49),C(50,60,49,51),C(51,52,45,46)],
+    what:"A small body at the bottom with an upper wick at least twice the body.",
+    mean:"Buyers ran it up and were rejected before the close. The mirror of a hammer.",
+    fail:"Common in choppy ranges where every push gets rejected. It only means something at an extreme." },
+  { name:"Doji", kind:"Indecision",
+    candles:[C(46,52,44,51),C(51,55,47,51),C(51,53,45,46)],
+    what:"Open and close land in nearly the same place.",
+    mean:"Neither side won the candle. After a long run, that stall is information: the pressure has stopped.",
+    fail:"In quiet conditions doji appear constantly and mean nothing. Only read one that ends a strong move." },
+  { name:"Morning star", kind:"Reversal · bullish",
+    candles:[C(58,59,48,49),C(47,49,45,47),C(48,58,47,57)],
+    what:"A strong down candle, a small indecisive one, then a strong up candle.",
+    mean:"Selling exhausts, the market pauses, buyers take over. Three candles telling one story.",
+    fail:"If the third candle doesn't recover most of the first, the pattern hasn't completed — it's just a pause." },
+  { name:"Three white soldiers", kind:"Continuation · bullish",
+    candles:[C(42,48,41,47),C(47,53,46,52),C(52,58,51,57)],
+    what:"Three up candles in a row, each closing near its high and opening inside the last body.",
+    mean:"Steady accumulation rather than one spike. Trend strength, not a reversal.",
+    fail:"After a long run this is often where the move ends, not where it starts. Late entries into soldiers get caught." },
+  { name:"Inside bar", kind:"Compression",
+    candles:[C(44,58,42,56),C(50,54,47,52),C(52,53,50,52)],
+    what:"A candle whose entire range sits inside the previous candle's range.",
+    mean:"Volatility contracting. The market is coiling, and the break of the outside candle's range usually sets direction.",
+    fail:"Direction is unknown until the break. Guessing the way out of an inside bar is a coin flip." },
+];
+let patIdx=0;
+function drawPattern(){
+  const p=PATTERNS[patIdx];
+  drawCandles($("patCanvas"), p.candles, { height:220 });
+  $("patKind").textContent=p.kind;
+  $("patName").textContent=p.name;
+  $("patWhat").textContent=p.what;
+  $("patMean").textContent=p.mean;
+  $("patFail").textContent=p.fail;
+  $("patCount").textContent=`${patIdx+1} of ${PATTERNS.length}`;
+}
+$("patNext").addEventListener("click",()=>{ patIdx=(patIdx+1)%PATTERNS.length; drawPattern(); });
+$("patPrev").addEventListener("click",()=>{ patIdx=(patIdx-1+PATTERNS.length)%PATTERNS.length; drawPattern(); });
+
+/* =======================================================================
+   LESSONS
+   ======================================================================= */
+const LESSONS=[
+  { t:"The payout decides everything", b:"At an 80% payout you need better than 55.6% accuracy to break even. At 70% you need 58.8%. Before any strategy question, know the number you have to beat — most people are trading a system that was never above it." },
+  { t:"Size before direction", b:"Direction is the part you can't control. Size is the part you can. Two percent of the account per trade means a run of ten losses costs about eighteen percent; ten percent per trade means the same run costs sixty-five. Same calls, different outcome." },
+  { t:"Losing streaks are normal", b:"At 60% accuracy, a run of five straight losses inside a hundred trades is the expected outcome, not bad luck. Plan for it in advance and it changes nothing. Discover it mid-drawdown and it usually ends the plan." },
+  { t:"A level, then a signal", b:"A pattern in open space is noise. The same pattern rejecting a prior high, a round number, or an old reaction point is a signal. The level does the work; the candle only confirms it." },
+  { t:"Time of day is an edge", b:"Session overlaps carry the heaviest flow and the cleanest moves. The dead hours between sessions produce the chop that stops people out. Trading fewer hours often raises accuracy more than any indicator." },
+  { t:"Write it down or repeat it", b:"Without a record you'll remember the wins and forget the pattern behind the losses. A journal turns a run of trades into information you can act on. That's what the journal page is for." },
+];
+$("lessons").innerHTML=LESSONS.map((l,i)=>`
+  <div class="card"><div class="card__k">Lesson ${i+1}</div>
+  <div class="card__v" style="font-size:18px">${l.t}</div>
+  <div class="card__note">${l.b}</div></div>`).join("");
+
+/* =======================================================================
+   SIMULATOR
+   ======================================================================= */
+const SIM_KEY="star.sim";
+let sim={ bal:1000, wins:0, losses:0, streak:0, best:0, candles:[] };
+
+function loadSim(){
+  try{ const r=localStorage.getItem(SIM_KEY); if(r) sim={...sim,...JSON.parse(r)}; }catch{}
+  if(!sim.candles || sim.candles.length<12) sim.candles=genCandles(18);
+}
+const saveSim=()=>{ try{ localStorage.setItem(SIM_KEY, JSON.stringify(sim)); }catch{} };
+
+function genCandles(n, from){
+  const out=[]; let price = from ?? 100;
+  // A drifting random walk with occasional momentum, so the series has runs
+  // to read rather than pure noise.
+  let drift=(Math.random()-0.5)*0.4;
+  for(let i=0;i<n;i++){
+    if(Math.random()<0.18) drift=(Math.random()-0.5)*0.9;
+    const o=price;
+    const move=drift + (Math.random()-0.5)*1.6;
+    const c=o+move;
+    const h=Math.max(o,c)+Math.random()*0.8;
+    const l=Math.min(o,c)-Math.random()*0.8;
+    out.push({o:+o.toFixed(2),h:+h.toFixed(2),l:+l.toFixed(2),c:+c.toFixed(2)});
+    price=c;
+  }
+  return out;
+}
+
+function drawSim(){
+  drawCandles($("simCanvas"), sim.candles.slice(-16), { height:220, markLast:true });
+  const n=sim.wins+sim.losses;
+  $("simBal").textContent=money(sim.bal);
+  $("simWR").textContent = n ? Math.round(sim.wins/n*100)+"%" : "—";
+  $("simRec").textContent=`${sim.wins}–${sim.losses}`;
+  $("simStreak").textContent = sim.streak>0 ? `${sim.streak} W` : sim.streak<0 ? `${-sim.streak} L` : "—";
+}
+
+function callIt(dir){
+  const last=sim.candles[sim.candles.length-1];
+  const next=genCandles(1, last.c)[0];
+  sim.candles.push(next);
+  if(sim.candles.length>60) sim.candles=sim.candles.slice(-60);
+
+  const wentUp=next.c>=next.o;
+  const won=(dir==="BUY")===wentUp;
+  const stake=sim.bal*0.02;
+
+  if(won){ sim.bal+=stake*0.8; sim.wins++; sim.streak=sim.streak>=0?sim.streak+1:1; }
+  else   { sim.bal-=stake;     sim.losses++; sim.streak=sim.streak<=0?sim.streak-1:-1; }
+  if(sim.streak>sim.best) sim.best=sim.streak;
+
+  const msg=$("simMsg");
+  msg.className="simmsg "+(won?"good":"bad");
+  msg.textContent = won
+    ? `Right — it closed ${wentUp?"up":"down"}. ${money(stake*0.8)} at an 80% payout.`
+    : `Wrong — it closed ${wentUp?"up":"down"}. ${money(stake)} gone; a loss costs the full stake.`;
+
+  saveSim(); drawSim();
+}
+$("simUp").addEventListener("click",()=>callIt("BUY"));
+$("simDown").addEventListener("click",()=>callIt("SELL"));
+$("simReset").addEventListener("click",()=>{
+  sim={bal:1000,wins:0,losses:0,streak:0,best:0,candles:genCandles(18)};
+  saveSim(); drawSim();
+  $("simMsg").className="simmsg"; $("simMsg").textContent="Reset. Call the next candle.";
+});
+
+/* =======================================================================
+   TRADE JOURNAL — device-local JSON, nothing uploaded
+   ======================================================================= */
+const J_KEY="star.journal";
+let trades=[];
+let weekOffset=0;
+let jDir="BUY", jRes="win";
+
+function loadJournal(){
+  try{ trades=JSON.parse(localStorage.getItem(J_KEY)||"[]"); }
+  catch{ trades=[]; }
+  if(!Array.isArray(trades)) trades=[];
+}
+const saveJournal=()=>{ try{ localStorage.setItem(J_KEY, JSON.stringify(trades)); }catch{} };
+
+// Monday-start week containing today, shifted by weekOffset.
+function weekRange(offset){
+  const d=new Date(); d.setHours(0,0,0,0);
+  const dow=(d.getDay()+6)%7;                 // Mon = 0
+  d.setDate(d.getDate()-dow+offset*7);
+  const end=new Date(d); end.setDate(d.getDate()+6);
+  return { start:d, end };
+}
+const iso=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
+const pnl=(t)=> t.result==="win" ? t.stake*t.payout/100
+              : t.result==="loss" ? -t.stake : 0;
+
+document.querySelectorAll("#jDir button").forEach(b=>b.addEventListener("click",()=>{
+  jDir=b.dataset.v;
+  document.querySelectorAll("#jDir button").forEach(x=>x.classList.toggle("on",x===b));
+}));
+document.querySelectorAll("#jRes button").forEach(b=>b.addEventListener("click",()=>{
+  jRes=b.dataset.v;
+  document.querySelectorAll("#jRes button").forEach(x=>x.classList.toggle("on",x===b));
+}));
+
+$("jAdd").addEventListener("click",()=>{
+  const date=$("jDate").value || iso(new Date());
+  const stake=parseFloat($("jStake").value)||0;
+  if(stake<=0){ $("jStake").focus(); return; }
+  trades.push({
+    id:Date.now()+"-"+Math.random().toString(36).slice(2,7),
+    date, pair:($("jPair").value||"").trim()||"—",
+    dir:jDir, stake, payout:parseFloat($("jPay").value)||0,
+    result:jRes, note:($("jNote").value||"").trim(),
+  });
+  saveJournal();
+  $("jNote").value="";
+  paintJournal();
+});
+
+$("wkPrev").addEventListener("click",()=>{ weekOffset--; paintJournal(); });
+$("wkNext").addEventListener("click",()=>{ weekOffset++; paintJournal(); });
+
+$("jExport").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify(trades,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="star-journal.json";
+  a.click(); URL.revokeObjectURL(a.href);
+});
+
+$("jWipe").addEventListener("click",()=>{
+  if(!confirm("Erase every logged trade on this device? This cannot be undone.")) return;
+  trades=[]; saveJournal(); paintJournal();
+});
+
+function paintJournal(){
+  const { start,end }=weekRange(weekOffset);
+  const s=iso(start), e=iso(end);
+  const wk=trades.filter(t=>t.date>=s&&t.date<=e).sort((a,b)=>a.date<b.date?1:-1);
+
+  const fmt=(d)=>d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
+  $("wkLabel").textContent = weekOffset===0 ? `This week · ${fmt(start)}–${fmt(end)}` : `${fmt(start)}–${fmt(end)}`;
+
+  const settled=wk.filter(t=>t.result!=="draw");
+  const wins=settled.filter(t=>t.result==="win").length;
+  const net=wk.reduce((a,t)=>a+pnl(t),0);
+
+  $("jN").textContent=wk.length;
+  $("jWR").textContent = settled.length ? Math.round(wins/settled.length*100)+"%" : "—";
+  $("jNet").textContent=money(net);
+  $("jNet").style.color = net>0?"var(--rise)":net<0?"var(--fall)":"var(--text)";
+
+  // Per-day totals across Mon–Sun
+  const days=[...Array(7)].map((_,i)=>{
+    const d=new Date(start); d.setDate(start.getDate()+i);
+    const key=iso(d);
+    const dayTrades=wk.filter(t=>t.date===key);
+    return { key, label:d.toLocaleDateString(undefined,{weekday:"short"})[0],
+             net:dayTrades.reduce((a,t)=>a+pnl(t),0), n:dayTrades.length };
+  });
+  const best=days.reduce((a,b)=>b.net>a.net?b:a,days[0]);
+  $("jBest").textContent = best && best.n ? money(best.net) : "—";
+
+  drawWeek(days);
+
+  $("jList").innerHTML = wk.length ? wk.map(t=>`
+    <div class="trade ${t.result}">
+      <div class="trade__top">
+        <span class="trade__dir ${t.dir==="BUY"?"up":"down"}">${t.dir}</span>
+        <span class="trade__pair">${t.pair}</span>
+        <span class="trade__pnl">${money(pnl(t))}</span>
+      </div>
+      <div class="trade__sub">
+        ${t.date} · ${money(t.stake)} at ${t.payout}% · ${t.result}
+        ${t.note?` · ${t.note.replace(/</g,"&lt;")}`:""}
+      </div>
+      <button class="trade__x" data-del="${t.id}" aria-label="Delete">×</button>
+    </div>`).join("")
+    : `<p class="hint" style="margin:18px 0">No trades logged this week.</p>`;
+
+  $("jList").querySelectorAll("[data-del]").forEach(b=>
+    b.addEventListener("click",()=>{
+      trades=trades.filter(t=>t.id!==b.dataset.del);
+      saveJournal(); paintJournal();
+    }));
+
+  paintHomeWeek();
+}
+
+function drawWeek(days){
+  const cv=$("jChart"); const { ctx,w,h }=fitCanvas(cv,120);
+  ctx.clearRect(0,0,w,h);
+  const max=Math.max(1,...days.map(d=>Math.abs(d.net)));
+  const pad=12, slot=(w-pad*2)/7, mid=h/2;
+  ctx.strokeStyle="rgba(255,255,255,.10)";
+  ctx.beginPath(); ctx.moveTo(pad,mid); ctx.lineTo(w-pad,mid); ctx.stroke();
+
+  days.forEach((d,i)=>{
+    const cx=pad+slot*i+slot/2, bw=Math.min(slot*0.5,26);
+    const bh=Math.abs(d.net)/max*(h/2-16);
+    ctx.fillStyle = d.net>0?"#34E5A0" : d.net<0?"#FF3D6E" : "rgba(255,255,255,.14)";
+    if(d.net>=0) ctx.fillRect(cx-bw/2, mid-bh, bw, Math.max(bh,2));
+    else ctx.fillRect(cx-bw/2, mid, bw, Math.max(bh,2));
+    ctx.fillStyle="#6D7A96"; ctx.font="10px IBM Plex Mono, monospace";
+    ctx.textAlign="center"; ctx.fillText(d.label, cx, h-2);
+  });
+}
+
+function paintHomeWeek(){
+  const { start,end }=weekRange(0);
+  const wk=trades.filter(t=>t.date>=iso(start)&&t.date<=iso(end));
+  const net=wk.reduce((a,t)=>a+pnl(t),0);
+  $("hWeek").textContent = wk.length ? money(net) : "—";
+  $("hWeek").style.color = net>0?"var(--rise)":net<0?"var(--fall)":"var(--text)";
+  $("hWeekN").textContent = wk.length ? `${wk.length} trade${wk.length>1?"s":""} logged.` : "No trades logged.";
+}
+
+/* =======================================================================
+   MINI BIBLE — King James Version, public domain, bundled in this file
+   ======================================================================= */
+const VERSES=[
+  {t:"strength",v:"I can do all things through Christ which strengtheneth me.",r:"Philippians 4:13"},
+  {t:"strength",v:"The LORD is my strength and my shield; my heart trusted in him, and I am helped.",r:"Psalm 28:7"},
+  {t:"strength",v:"Be strong and of a good courage; be not afraid, neither be thou dismayed.",r:"Joshua 1:9"},
+  {t:"strength",v:"They that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles.",r:"Isaiah 40:31"},
+  {t:"strength",v:"God is our refuge and strength, a very present help in trouble.",r:"Psalm 46:1"},
+  {t:"strength",v:"The joy of the LORD is your strength.",r:"Nehemiah 8:10"},
+
+  {t:"patience",v:"Rest in the LORD, and wait patiently for him.",r:"Psalm 37:7"},
+  {t:"patience",v:"Let us not be weary in well doing: for in due season we shall reap, if we faint not.",r:"Galatians 6:9"},
+  {t:"patience",v:"But let patience have her perfect work, that ye may be perfect and entire, wanting nothing.",r:"James 1:4"},
+  {t:"patience",v:"To every thing there is a season, and a time to every purpose under the heaven.",r:"Ecclesiastes 3:1"},
+  {t:"patience",v:"I waited patiently for the LORD; and he inclined unto me, and heard my cry.",r:"Psalm 40:1"},
+
+  {t:"discipline",v:"He that is slow to anger is better than the mighty; and he that ruleth his spirit than he that taketh a city.",r:"Proverbs 16:32"},
+  {t:"discipline",v:"Wealth gotten by vanity shall be diminished: but he that gathereth by labour shall increase.",r:"Proverbs 13:11"},
+  {t:"discipline",v:"The thoughts of the diligent tend only to plenteousness; but of every one that is hasty only to want.",r:"Proverbs 21:5"},
+  {t:"discipline",v:"For God hath not given us the spirit of fear; but of power, and of love, and of a sound mind.",r:"2 Timothy 1:7"},
+  {t:"discipline",v:"Whatsoever ye do, do it heartily, as to the Lord, and not unto men.",r:"Colossians 3:23"},
+  {t:"discipline",v:"He that is faithful in that which is least is faithful also in much.",r:"Luke 16:10"},
+
+  {t:"peace",v:"Peace I leave with you, my peace I give unto you: let not your heart be troubled.",r:"John 14:27"},
+  {t:"peace",v:"Thou wilt keep him in perfect peace, whose mind is stayed on thee.",r:"Isaiah 26:3"},
+  {t:"peace",v:"Casting all your care upon him; for he careth for you.",r:"1 Peter 5:7"},
+  {t:"peace",v:"Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God.",r:"Philippians 4:6"},
+  {t:"peace",v:"Come unto me, all ye that labour and are heavy laden, and I will give you rest.",r:"Matthew 11:28"},
+
+  {t:"provision",v:"But my God shall supply all your need according to his riches in glory by Christ Jesus.",r:"Philippians 4:19"},
+  {t:"provision",v:"The LORD is my shepherd; I shall not want.",r:"Psalm 23:1"},
+  {t:"provision",v:"Seek ye first the kingdom of God, and his righteousness; and all these things shall be added unto you.",r:"Matthew 6:33"},
+  {t:"provision",v:"Every good gift and every perfect gift is from above.",r:"James 1:17"},
+  {t:"provision",v:"Honour the LORD with thy substance, and with the firstfruits of all thine increase.",r:"Proverbs 3:9"},
+
+  {t:"guidance",v:"Trust in the LORD with all thine heart; and lean not unto thine own understanding.",r:"Proverbs 3:5"},
+  {t:"guidance",v:"Thy word is a lamp unto my feet, and a light unto my path.",r:"Psalm 119:105"},
+  {t:"guidance",v:"Commit thy works unto the LORD, and thy thoughts shall be established.",r:"Proverbs 16:3"},
+  {t:"guidance",v:"A man's heart deviseth his way: but the LORD directeth his steps.",r:"Proverbs 16:9"},
+  {t:"guidance",v:"He shall baptize you with the Holy Ghost, and with fire.",r:"Matthew 3:11"},
+  {t:"guidance",v:"In all thy ways acknowledge him, and he shall direct thy paths.",r:"Proverbs 3:6"},
+];
+const TOPICS=["all","strength","patience","discipline","peace","provision","guidance"];
+let topic="all", lastVerse=-1;
+
+$("bChips").innerHTML=TOPICS.map(t=>
+  `<button class="chip${t==="all"?" on":""}" data-t="${t}">${t}</button>`).join("");
+$("bChips").querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>{
+  topic=c.dataset.t;
+  $("bChips").querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));
+  nextVerse();
+}));
+
+function nextVerse(){
+  const pool=VERSES.filter(v=>topic==="all"||v.t===topic);
+  let i=Math.floor(Math.random()*pool.length);
+  if(pool.length>1 && pool[i].r===lastVerse) i=(i+1)%pool.length;   // don't repeat
+  lastVerse=pool[i].r;
+  $("bText").textContent=pool[i].v;
+  $("bRef").textContent=pool[i].r;
+}
+$("bNext").addEventListener("click",nextVerse);
+
+function homeVerse(){
+  const v=VERSES[Math.floor(Math.random()*VERSES.length)];
+  $("hVerse").textContent=v.v; $("hVerseRef").textContent=v.r;
+}
+
+/* =======================================================================
+   SIGNAL FEED — behaviour unchanged
+   ======================================================================= */
+const el={
   dot:$("dot"), feedState:$("feedState"), asset:$("asset"),
   idle:$("idle"), live:$("live"), eyebrow:$("eyebrow"), call:$("call"),
   clockNum:$("clockNum"), reason:$("reason"), facts:$("facts"),
@@ -702,296 +1283,260 @@ const el = {
   enable:$("enable"), hint:$("hint"),
 };
 
-if (SUPABASE_URL.includes("YOUR-PROJECT")) {
-  document.body.innerHTML =
-    '<div class="setup"><p><b style="color:#EEF3FF">Not configured yet.</b></p>' +
-    '<p style="margin-top:12px">Open <code>index.html</code> and fill in ' +
-    '<code>SUPABASE_URL</code>, <code>SUPABASE_ANON</code> and ' +
+if(SUPABASE_URL.includes("YOUR-PROJECT")){
+  document.body.innerHTML=
+    '<div class="setup"><p><b style="color:#EEF3FF">Not configured yet.</b></p>'+
+    '<p style="margin-top:12px">Open <code>index.html</code> and fill in '+
+    '<code>SUPABASE_URL</code>, <code>SUPABASE_ANON</code> and '+
     '<code>VAPID_PUBLIC</code> near the bottom of the file.</p></div>';
   throw new Error("unconfigured");
 }
 
-const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
-  realtime: { params: { eventsPerSecond: 20 } },
-});
+const { createClient }=await import("https://esm.sh/@supabase/supabase-js@2");
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON,{realtime:{params:{eventsPerSecond:20}}});
 
-let current = null, lastBeat = 0, lastAsset = "", skew = 0;
+let current=null, lastBeat=0, lastAsset="", skew=0;
+const noteSkew=(s)=>{ if(s&&s.sent_at) skew=now()-Number(s.sent_at); };
+const anchorOf=(s)=> s&&s.sent_at ? Number(s.sent_at)+skew : now();
+const endsAt=(s,at)=> at+Number(s.entry_in||0)+Number(s.trade_seconds||0);
+const setPhase=(v)=>document.documentElement.style.setProperty("--phase",`var(${v})`);
+const setDrain=(f)=>document.documentElement.style.setProperty("--drain",
+  Math.min(100,Math.max(0,f*100)).toFixed(1)+"%");
 
-/* Signals carry sent_at on the PC's clock. Measuring the gap on live
-   arrivals lets a signal fetched later be placed correctly on this phone's
-   timeline even if the two clocks disagree. */
-function noteSkew(sig){ if (sig && sig.sent_at) skew = now() - Number(sig.sent_at); }
+function show(sig,anchor){
+  const at = anchor===undefined ? anchorOf(sig) : anchor;
+  if(now()>=endsAt(sig,at)) return;
+  const dir=String(sig.direction||"").toUpperCase();
+  current={...sig,_anchor:at,_entryAt:at+Number(sig.entry_in||0),_expiresAt:endsAt(sig,at)};
 
-const anchorOf = (sig) => sig && sig.sent_at ? Number(sig.sent_at) + skew : now();
-const endsAt = (sig, at) => at + Number(sig.entry_in||0) + Number(sig.trade_seconds||0);
+  el.call.textContent=dir;
+  el.reason.textContent=sig.reason||"";
+  el.fConf.textContent=Math.round((sig.confidence||0)*100)+"%";
+  el.fGrade.textContent=sig.grade||"—";
+  el.fFrame.textContent=sig.timeframe||"—";
+  el.fTrade.textContent=sig.trade_seconds?Math.round(sig.trade_seconds)+"s":"—";
+  if(sig.asset){ lastAsset=sig.asset; el.asset.textContent=sig.asset; }
 
-const setPhase = (v) => document.documentElement.style.setProperty("--phase", `var(${v})`);
-const setDrain = (f) =>
-  document.documentElement.style.setProperty("--drain",
-    Math.min(100, Math.max(0, f*100)).toFixed(1) + "%");
-
-function show(sig, anchor){
-  const at = anchor === undefined ? anchorOf(sig) : anchor;
-  if (now() >= endsAt(sig, at)) return;           // never display a finished trade
-
-  const dir = String(sig.direction||"").toUpperCase();
-  current = { ...sig, _anchor:at, _entryAt:at + Number(sig.entry_in||0), _expiresAt:endsAt(sig,at) };
-
-  el.call.textContent = dir;
-  el.reason.textContent = sig.reason || "";
-  el.fConf.textContent  = Math.round((sig.confidence||0)*100) + "%";
-  el.fGrade.textContent = sig.grade || "—";
-  el.fFrame.textContent = sig.timeframe || "—";
-  el.fTrade.textContent = sig.trade_seconds ? Math.round(sig.trade_seconds)+"s" : "—";
-
-  if (sig.asset){ lastAsset = sig.asset; el.asset.textContent = sig.asset; }
-
-  el.idle.hidden = true; el.live.hidden = false; el.facts.hidden = false;
+  el.idle.hidden=true; el.live.hidden=false; el.facts.hidden=false;
   document.documentElement.style.setProperty("--dir",
     `var(${dir==="BUY"?"--rise":dir==="SELL"?"--fall":"--brand"})`);
-
   save(); tick(); paintHome();
 }
 
 function clear(){
-  current = null;
-  el.live.hidden = true; el.facts.hidden = true; el.idle.hidden = false;
+  current=null;
+  el.live.hidden=true; el.facts.hidden=true; el.idle.hidden=false;
   el.call.classList.remove("call--now");
   setDrain(1); setPhase("--brand"); paintHome();
 }
 
 function tick(){
-  if (!current) return;
-  const t = now();
-  const { _entryAt:entry, _expiresAt:expiry, _anchor:anchor } = current;
-  const dir = String(current.direction||"").toUpperCase();
+  if(!current) return;
+  const t=now();
+  const { _entryAt:entry,_expiresAt:expiry,_anchor:anchor }=current;
+  const dir=String(current.direction||"").toUpperCase();
 
-  if (t < entry){
-    el.eyebrow.textContent = "Enter in";
-    el.call.textContent = dir;
+  if(t<entry){
+    el.eyebrow.textContent="Enter in";
+    el.call.textContent=dir;
     el.call.classList.remove("call--now");
-    el.clockNum.textContent = Math.max(1, Math.ceil(entry - t));
+    el.clockNum.textContent=Math.max(1,Math.ceil(entry-t));
     setPhase("--brand");
-    setDrain((t - anchor) / Math.max(entry - anchor, 1));
+    setDrain((t-anchor)/Math.max(entry-anchor,1));
     return;
   }
-  if (t < expiry){
-    el.eyebrow.textContent = "Expires in";
-    el.call.textContent = dir + " NOW";
+  if(t<expiry){
+    el.eyebrow.textContent="Expires in";
+    el.call.textContent=dir+" NOW";
     el.call.classList.add("call--now");
-    el.clockNum.textContent = Math.max(1, Math.ceil(expiry - t));
+    el.clockNum.textContent=Math.max(1,Math.ceil(expiry-t));
     setPhase(dir==="BUY"?"--rise":dir==="SELL"?"--fall":"--brand");
-    setDrain((t - entry) / Math.max(expiry - entry, 1));
+    setDrain((t-entry)/Math.max(expiry-entry,1));
     return;
   }
-  el.eyebrow.textContent = "Trade finished";
-  el.call.textContent = dir;
+  el.eyebrow.textContent="Trade finished";
+  el.call.textContent=dir;
   el.call.classList.remove("call--now");
-  el.clockNum.textContent = "0";
+  el.clockNum.textContent="0";
   setPhase("--brand"); setDrain(1); forget();
-  if (!current._ending){
-    current._ending = true;
-    setTimeout(() => { if (current && now() >= current._expiresAt) clear(); }, 4000);
+  if(!current._ending){
+    current._ending=true;
+    setTimeout(()=>{ if(current&&now()>=current._expiresAt) clear(); },4000);
   }
 }
-setInterval(tick, 100);
+setInterval(tick,100);
 
-/* A refresh shouldn't blank a running trade. Phone's own storage, holding its
-   own screen — dropped the moment the trade ends. */
-const STORE = "star.signal";
-const save = () => { try{ localStorage.setItem(STORE, JSON.stringify({sig:current, at:current._anchor})); }catch{} };
-const forget = () => { try{ localStorage.removeItem(STORE); }catch{} };
+const STORE="star.signal";
+const save=()=>{ try{ localStorage.setItem(STORE,JSON.stringify({sig:current,at:current._anchor})); }catch{} };
+const forget=()=>{ try{ localStorage.removeItem(STORE); }catch{} };
 function restore(){
-  let raw; try{ raw = localStorage.getItem(STORE); }catch{ return; }
-  if (!raw) return;
+  let raw; try{ raw=localStorage.getItem(STORE); }catch{ return; }
+  if(!raw) return;
   try{
-    const { sig, at } = JSON.parse(raw);
-    if (sig && now() < endsAt(sig, at)) show(sig, at); else forget();
+    const {sig,at}=JSON.parse(raw);
+    if(sig&&now()<endsAt(sig,at)) show(sig,at); else forget();
   }catch{ forget(); }
 }
 
 function paintFeed(){
-  const age = now() - skew - lastBeat;
+  const age=now()-skew-lastBeat;
   let label;
-  if (!lastBeat){ el.dot.className = "dot"; label = "Connecting"; }
-  else if (age < 30){ el.dot.className = "dot live"; label = "Live"; }
-  else {
-    el.dot.className = "dot stale";
-    const m = Math.floor(age/60);
-    label = m < 1 ? "Reconnecting" : `Offline ${m}m`;
+  if(!lastBeat){ el.dot.className="dot"; label="Connecting"; }
+  else if(age<30){ el.dot.className="dot live"; label="Live"; }
+  else{
+    el.dot.className="dot stale";
+    const m=Math.floor(age/60);
+    label = m<1 ? "Reconnecting" : `Offline ${m}m`;
   }
-  el.feedState.textContent = label;
-  $("hStatus").textContent = label;
+  el.feedState.textContent=label;
+  $("hStatus").textContent=label;
   $("hNote").textContent =
-    label === "Live" ? "The desk is running and reporting in."
-    : label === "Connecting" ? "Checking in with the desk."
+    label==="Live" ? "The desk is running and reporting in."
+    : label==="Connecting" ? "Checking in with the desk."
     : "No check-in from the desk. Signals are paused until it's back.";
 }
-setInterval(paintFeed, 1000);
+setInterval(paintFeed,1000);
 
 function paintHome(){
-  $("hAsset").textContent = lastAsset || "—";
-  $("hSignal").textContent = current
-    ? `${String(current.direction||"").toUpperCase()} live`
-    : "Quiet";
+  $("hAsset").textContent=lastAsset||"—";
+  $("hSignal").textContent = current ? `${String(current.direction||"").toUpperCase()} live` : "Quiet";
 }
 
 function applyBeat(row){
-  if (!row) return;
-  lastBeat = Number(row.beat_at || 0);
-  if (row.asset && row.asset !== lastAsset){
-    // Pair changed. Anything on screen belongs to the old pair.
-    lastAsset = row.asset;
-    el.asset.textContent = row.asset;
-    if (current){ forget(); clear(); }
+  if(!row) return;
+  lastBeat=Number(row.beat_at||0);
+  if(row.asset&&row.asset!==lastAsset){
+    lastAsset=row.asset; el.asset.textContent=row.asset;
+    if(current){ forget(); clear(); }
   }
   paintFeed(); paintHome();
 }
 
 function applySignal(sig){
-  if (!sig || !sig.sent_at) return;
-  if (current && current.signal_key === sig.signal_key) return;
-  if (lastAsset && sig.asset && sig.asset !== lastAsset) return;
-  const at = anchorOf(sig);
-  if (now() >= endsAt(sig, at)) return;
-  show(sig, at);
+  if(!sig||!sig.sent_at) return;
+  if(current&&current.signal_key===sig.signal_key) return;
+  if(lastAsset&&sig.asset&&sig.asset!==lastAsset) return;
+  const at=anchorOf(sig);
+  if(now()>=endsAt(sig,at)) return;
+  show(sig,at);
 }
 
-/* Realtime sockets die when iOS backgrounds the tab and don't reliably come
-   back. One builder, one watchdog, and a state pull on every reconnect so
-   nothing is missed while the socket was gone. */
-let channel = null, lastRebuild = 0;
-
+let channel=null,lastRebuild=0;
 async function pullState(){
   try{
-    const [beat, live] = await Promise.all([
+    const [beat,live]=await Promise.all([
       sb.from("feed_status").select("*").eq("id",1).maybeSingle(),
       sb.from("live_signal").select("*").eq("id",1).maybeSingle(),
     ]);
     applyBeat(beat.data);
-    // Catch a trade that started before this screen existed — broadcasts are
-    // fire-and-forget, so without this it would never appear.
-    if (live.data) applySignal(live.data);
-  }catch{ /* offline; the watchdog retries */ }
+    if(live.data) applySignal(live.data);
+  }catch{}
 }
-
 function connect(){
-  lastRebuild = now();
-  if (channel){ try{ sb.removeChannel(channel); }catch{} }
-  channel = sb.channel("star-trader")
-    .on("broadcast", { event:"signal" }, ({payload}) => { noteSkew(payload); applySignal(payload); })
-    .on("broadcast", { event:"heartbeat" }, ({payload}) => applyBeat(payload))
-    .on("postgres_changes", { event:"*", schema:"public", table:"feed_status" },
-        ({new:row}) => applyBeat(row))
-    .on("postgres_changes", { event:"*", schema:"public", table:"live_signal" },
-        ({new:row}) => applySignal(row))
-    .subscribe((status) => { if (status === "SUBSCRIBED") pullState(); });
+  lastRebuild=now();
+  if(channel){ try{ sb.removeChannel(channel); }catch{} }
+  channel=sb.channel("star-trader")
+    .on("broadcast",{event:"signal"},({payload})=>{ noteSkew(payload); applySignal(payload); })
+    .on("broadcast",{event:"heartbeat"},({payload})=>applyBeat(payload))
+    .on("postgres_changes",{event:"*",schema:"public",table:"feed_status"},({new:r})=>applyBeat(r))
+    .on("postgres_changes",{event:"*",schema:"public",table:"live_signal"},({new:r})=>applySignal(r))
+    .subscribe((s)=>{ if(s==="SUBSCRIBED") pullState(); });
 }
-
-setInterval(() => {
-  const beatAge = now() - skew - lastBeat;
-  if (lastBeat && beatAge > 25 && now() - lastRebuild > 15) connect();
-}, 5000);
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState !== "visible") return;
+setInterval(()=>{
+  const age=now()-skew-lastBeat;
+  if(lastBeat&&age>25&&now()-lastRebuild>15) connect();
+},5000);
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState!=="visible") return;
   pullState();
-  if (now() - lastRebuild > 10) connect();
+  if(now()-lastRebuild>10) connect();
 });
-window.addEventListener("online", connect);
-window.addEventListener("pageshow", pullState);
+addEventListener("online",connect);
+addEventListener("pageshow",pullState);
 
 /* =======================================================================
    NOTIFICATIONS
    ======================================================================= */
-const standalone = window.matchMedia("(display-mode: standalone)").matches ||
-                   window.navigator.standalone === true;
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
 
 function b64ToBytes(b64){
-  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
-  const raw = atob((b64+pad).replace(/-/g,"+").replace(/_/g,"/"));
-  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  const pad="=".repeat((4-(b64.length%4))%4);
+  const raw=atob((b64+pad).replace(/-/g,"+").replace(/_/g,"/"));
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
 
 async function refreshButton(){
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)){
-    el.enable.hidden = true;
-    el.hint.hidden = false;
-    el.hint.innerHTML = isIOS && !standalone
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)){
+    el.enable.hidden=true; el.hint.hidden=false;
+    el.hint.innerHTML = isIOS&&!standalone
       ? 'Tap <b>Share</b>, then <b>Add to Home Screen</b> to get alerts on your lock screen.'
       : "This browser can't deliver alerts. Signals still appear here while the app is open.";
-    $("aState").textContent = isIOS && !standalone ? "Needs install" : "Unavailable";
-    $("aNote").textContent = isIOS && !standalone
+    $("aState").textContent = isIOS&&!standalone ? "Needs install" : "Unavailable";
+    $("aNote").textContent = isIOS&&!standalone
       ? "Apple only allows lock-screen alerts for apps added to the home screen."
       : "Keep this page open to see signals as they fire.";
     return;
   }
-  const reg = await navigator.serviceWorker.ready;
-  const sub = await reg.pushManager.getSubscription();
-  if (sub){
-    el.enable.textContent = "Alerts on";
-    el.enable.classList.add("btn--on");
-    el.hint.hidden = false;
-    el.hint.textContent = "Tap to turn alerts off.";
-    $("aState").textContent = "On";
-    $("aNote").textContent = "This device will buzz when a signal fires, even with the app closed.";
-  } else {
-    el.enable.textContent = "Turn on alerts";
-    el.enable.classList.remove("btn--on");
-    el.hint.hidden = true;
-    $("aState").textContent = "Off";
-    $("aNote").textContent = "Signals only appear while this app is open.";
+  const reg=await navigator.serviceWorker.ready;
+  const sub=await reg.pushManager.getSubscription();
+  if(sub){
+    el.enable.textContent="Alerts on"; el.enable.classList.add("btn--on");
+    el.hint.hidden=false; el.hint.textContent="Tap to turn alerts off.";
+    $("aState").textContent="On";
+    $("aNote").textContent="This device will buzz when a signal fires, even with the app closed.";
+  }else{
+    el.enable.textContent="Turn on alerts"; el.enable.classList.remove("btn--on");
+    el.hint.hidden=true;
+    $("aState").textContent="Off";
+    $("aNote").textContent="Signals only appear while this app is open.";
   }
 }
 
-el.enable.addEventListener("click", async () => {
-  const reg = await navigator.serviceWorker.ready;
-  const existing = await reg.pushManager.getSubscription();
-
-  if (existing){
-    await sb.from("push_subscriptions").delete().eq("endpoint", existing.endpoint);
+el.enable.addEventListener("click",async()=>{
+  const reg=await navigator.serviceWorker.ready;
+  const existing=await reg.pushManager.getSubscription();
+  if(existing){
+    await sb.from("push_subscriptions").delete().eq("endpoint",existing.endpoint);
     await existing.unsubscribe();
     return refreshButton();
   }
-
-  if (await Notification.requestPermission() !== "granted"){
-    el.hint.hidden = false;
-    el.hint.textContent = "Alerts are blocked. Turn notifications back on in your device settings.";
+  if(await Notification.requestPermission()!=="granted"){
+    el.hint.hidden=false;
+    el.hint.textContent="Alerts are blocked. Turn notifications back on in your device settings.";
     return;
   }
-
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: b64ToBytes(VAPID_PUBLIC),
+  const sub=await reg.pushManager.subscribe({
+    userVisibleOnly:true, applicationServerKey:b64ToBytes(VAPID_PUBLIC),
   });
-  const raw = sub.toJSON();
-  const { error } = await sb.from("push_subscriptions").insert({
-    endpoint: raw.endpoint, p256dh: raw.keys.p256dh, auth: raw.keys.auth,
-    label: navigator.userAgent.slice(0,60),
+  const raw=sub.toJSON();
+  const { error }=await sb.from("push_subscriptions").insert({
+    endpoint:raw.endpoint,p256dh:raw.keys.p256dh,auth:raw.keys.auth,
+    label:navigator.userAgent.slice(0,60),
   });
-  if (error && error.code !== "23505"){
-    el.hint.hidden = false;
-    el.hint.textContent = "Couldn't register this device. Check your connection and try again.";
+  if(error&&error.code!=="23505"){
+    el.hint.hidden=false;
+    el.hint.textContent="Couldn't register this device. Check your connection and try again.";
     return;
   }
   refreshButton();
 });
 
-if ("serviceWorker" in navigator){
-  navigator.serviceWorker.register("./sw.js").then(refreshButton).catch(() => {});
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("./sw.js").then(refreshButton).catch(()=>{});
 } else refreshButton();
 
 /* ===================================================================== */
+$("jDate").value=iso(new Date());
+loadSim(); loadJournal();
+paintSessions(); homeVerse(); nextVerse();
+calcRisk(); drawPattern(); drawSim(); paintJournal();
+clear(); restore(); connect();
 route();
-calcStake();
-calcRuin();
-paintSessions();
-paintHome();
-clear();
-restore();
-connect();
+addEventListener("resize",()=>{ if(location.hash.includes("patterns")) drawPattern();
+  if(location.hash.includes("sim")) drawSim();
+  if(location.hash.includes("risk")) calcRisk();
+  if(location.hash.includes("journal")) paintJournal(); });
 </script>
 </body>
 </html>
