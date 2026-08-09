@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#04060F" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -12,19 +12,22 @@
 <link rel="apple-touch-icon" href="./icon-180.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet" />
 
 <style>
 :root{
   --void:#04060F;
   --panel:#0E1424;
+  --panel-2:#131B2E;
   --edge:#1E2942;
+  --edge-soft:#17203450;
   --brand:#C93BE8;
   --flame:#2D6BFF;
   --flame-hot:#8FD4FF;
   --rise:#34E5A0;
   --fall:#FF3D6E;
-  --dim:#6D7A96;
+  --warn:#FFC24B;
+  --dim:#8592AE;
   --text:#EEF3FF;
 
   --phase:var(--brand);
@@ -33,6 +36,7 @@
 
   --mono:"IBM Plex Mono",ui-monospace,monospace;
   --display:"Bricolage Grotesque",system-ui,sans-serif;
+  --read:"Source Serif 4",Georgia,serif;
 }
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -45,293 +49,320 @@ body{
   overflow:hidden;
   display:flex;
   flex-direction:column;
+  -webkit-text-size-adjust:100%;
 }
 
-/* ===== flame canvas: sits behind everything, never intercepts taps ===== */
-#flames{
-  position:fixed;
-  inset:0;
-  width:100%;
-  height:100%;
-  z-index:0;
-  pointer-events:none;
+#flames{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;
+  transition:opacity .4s ease}
+/* Reading pages pull the fire back so body text stays legible. The home and
+   signal screens keep it at full strength. */
+body.reading #flames{opacity:.22}
+body.reading .shell::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(4,6,15,.55),rgba(4,6,15,.86));
 }
 
 .shell{
-  position:relative;
-  z-index:1;
-  flex:1 1 auto;
-  display:flex;
-  flex-direction:column;
-  min-height:0;
+  position:relative;z-index:1;flex:1 1 auto;
+  display:flex;flex-direction:column;min-height:0;
   padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
 
-/* ===== drain meter ===================================================== */
+/* ===== drain meter ===== */
 .meter{position:relative;height:6px;flex:0 0 auto;background:var(--edge);overflow:hidden}
 .meter__fill{
-  position:absolute;inset:0 var(--drain) 0 0;
-  background:var(--phase);
+  position:absolute;inset:0 var(--drain) 0 0;background:var(--phase);
   transition:background .35s ease;
   box-shadow:0 0 18px color-mix(in srgb,var(--phase) 70%,transparent);
 }
 .meter[hidden]{display:none}
 
-/* ===== top bar ========================================================= */
+/* ===== top bar ===== */
 .bar{
-  display:flex;align-items:center;gap:12px;
-  padding:12px 16px;flex:0 0 auto;
-  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+  display:flex;align-items:center;gap:11px;padding:12px 16px;flex:0 0 auto;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
+  border-bottom:1px solid var(--edge-soft);
 }
-.burger{
-  width:40px;height:40px;margin:-8px 0 -8px -8px;
-  display:grid;place-items:center;
-  background:none;border:0;cursor:pointer;color:var(--text);
-}
-.burger span{display:block;width:18px;height:1.5px;background:currentColor;box-shadow:0 5px 0 currentColor,0 -5px 0 currentColor}
-.bar__title{font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:.02em;color:var(--text);text-transform:none}
+.burger{width:42px;height:42px;margin:-8px 0 -8px -10px;display:grid;place-items:center;
+  background:none;border:0;cursor:pointer;color:var(--text)}
+.burger span{display:block;width:19px;height:2px;background:currentColor;
+  box-shadow:0 6px 0 currentColor,0 -6px 0 currentColor}
 .bar__spacer{margin-left:auto}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:0 0 auto;transition:background .3s}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:0 0 auto;transition:background .25s}
 .dot.live{background:var(--rise);animation:pulse 2.4s ease-out infinite}
 .dot.stale{background:var(--fall)}
 @keyframes pulse{
   0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--rise) 55%,transparent)}
-  100%{box-shadow:0 0 0 9px transparent}
+  100%{box-shadow:0 0 0 10px transparent}
 }
 
-/* ===== nested menu ===================================================== */
-.scrim{
-  position:fixed;inset:0;z-index:20;
-  background:rgba(4,6,15,.72);backdrop-filter:blur(6px);
-  opacity:0;pointer-events:none;transition:opacity .25s ease;
-}
+/* ===== menu ===== */
+.scrim{position:fixed;inset:0;z-index:20;background:rgba(4,6,15,.74);
+  backdrop-filter:blur(7px);opacity:0;pointer-events:none;transition:opacity .25s}
 .scrim.open{opacity:1;pointer-events:auto}
 
 .menu{
-  position:fixed;top:0;bottom:0;left:0;width:min(84vw,320px);z-index:21;
-  background:var(--panel);
-  border-right:1px solid var(--edge);
-  transform:translateX(-102%);
-  transition:transform .28s cubic-bezier(.3,.8,.3,1);
-  display:flex;flex-direction:column;
-  padding:calc(20px + env(safe-area-inset-top)) 0 calc(20px + env(safe-area-inset-bottom));
-  overflow-y:auto;
+  position:fixed;top:0;bottom:0;left:0;width:min(86vw,330px);z-index:21;
+  background:var(--panel);border-right:1px solid var(--edge);
+  transform:translateX(-102%);transition:transform .28s cubic-bezier(.3,.8,.3,1);
+  display:flex;flex-direction:column;overflow-y:auto;
+  padding:calc(22px + env(safe-area-inset-top)) 0 calc(28px + env(safe-area-inset-bottom));
 }
 .menu.open{transform:none}
-.menu__brand{
-  font-family:var(--display);font-weight:800;font-size:19px;
-  padding:0 22px 18px;letter-spacing:-.01em;
-}
-.menu__brand small{display:block;font-family:var(--mono);font-weight:400;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-top:5px}
+.menu__brand{font-family:var(--display);font-weight:800;font-size:20px;padding:0 22px 20px;letter-spacing:-.01em}
+.menu__brand small{display:block;font-family:var(--mono);font-weight:400;font-size:10px;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-top:6px}
 
 .nav a,.nav button{
-  display:block;width:100%;text-align:left;
-  background:none;border:0;cursor:pointer;
-  font-family:var(--mono);font-size:14px;color:var(--text);
-  padding:13px 22px;text-decoration:none;
-  border-left:2px solid transparent;
+  display:block;width:100%;text-align:left;background:none;border:0;cursor:pointer;
+  font-family:var(--mono);font-size:15px;color:var(--text);padding:14px 22px;
+  text-decoration:none;border-left:2px solid transparent;
 }
-.nav a:hover,.nav button:hover{background:rgba(255,255,255,.04)}
-.nav a.active{border-left-color:var(--brand);color:var(--brand);background:rgba(201,59,232,.07)}
+.nav a:hover,.nav button:hover{background:rgba(255,255,255,.05)}
+.nav a.active{border-left-color:var(--brand);color:var(--brand);background:rgba(201,59,232,.08)}
 .nav__group>button::after{content:"▸";float:right;color:var(--dim);transition:transform .2s}
 .nav__group.open>button::after{transform:rotate(90deg);display:inline-block}
-.nav__sub{max-height:0;overflow:hidden;transition:max-height .28s ease}
-.nav__group.open .nav__sub{max-height:340px}
-.nav__sub a{padding-left:40px;font-size:13px;color:var(--dim)}
+.nav__sub{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.nav__group.open .nav__sub{max-height:520px}
+.nav__sub a{padding-left:40px;font-size:14px;color:var(--dim)}
 .nav__sub a.active{color:var(--brand)}
 .nav__sep{height:1px;background:var(--edge);margin:12px 22px}
+.nav__label{padding:16px 22px 6px;font-size:9.5px;letter-spacing:.24em;
+  text-transform:uppercase;color:#5A6785}
 
-/* ===== pages =========================================================== */
+/* ===== pages ===== */
 .page{display:none;flex:1 1 auto;min-height:0;flex-direction:column}
 .page.active{display:flex}
-.scroll{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 20px calc(28px + env(safe-area-inset-bottom))}
+.scroll{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:0 20px calc(40px + env(safe-area-inset-bottom))}
 
-/* ---- home ---- */
-.hero{padding:40px 0 26px;text-align:center}
-.hero h1{
-  font-family:var(--display);font-weight:800;
-  font-size:clamp(36px,12vw,60px);line-height:.94;letter-spacing:-.035em;
-}
-.hero h1 em{font-style:normal;color:var(--flame-hot)}
-.hero p{margin-top:14px;font-size:13px;line-height:1.6;color:var(--dim);max-width:30ch;margin-inline:auto}
+h2.ph{font-family:var(--display);font-weight:800;font-size:clamp(27px,8vw,34px);
+  letter-spacing:-.028em;padding:28px 0 6px;line-height:1.1}
+p.pd{font-size:15px;color:var(--dim);line-height:1.65;margin-bottom:22px}
 
+/* ===== cards ===== */
 .card{
-  background:color-mix(in srgb,var(--panel) 88%,transparent);
-  border:1px solid var(--edge);border-radius:3px;
-  padding:18px;margin-bottom:12px;
+  background:color-mix(in srgb,var(--panel) 90%,transparent);
+  border:1px solid var(--edge);border-radius:4px;padding:19px;margin-bottom:13px;
 }
-.card__k{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
-.card__v{font-family:var(--display);font-weight:600;font-size:23px;letter-spacing:-.02em}
-.card__note{font-size:12px;color:var(--dim);margin-top:7px;line-height:1.55}
-
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card__k{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:9px}
+.card__v{font-family:var(--display);font-weight:600;font-size:24px;letter-spacing:-.02em;line-height:1.15}
+.card__note{font-size:14px;color:var(--dim);margin-top:9px;line-height:1.6}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
 .grid2 .card{margin-bottom:0}
+a.card{display:block;color:inherit;text-decoration:none}
 
-.cta{
-  display:block;width:100%;text-align:center;text-decoration:none;
-  border:1px solid var(--flame);background:color-mix(in srgb,var(--flame) 14%,transparent);
-  color:var(--text);font-family:var(--mono);font-size:13px;font-weight:500;
-  letter-spacing:.12em;text-transform:uppercase;padding:17px;border-radius:3px;
-  margin-top:6px;
-}
+.deskrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  margin-top:11px;padding-top:11px;border-top:1px solid var(--edge);
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.deskrow b{font-weight:500;color:var(--text);text-transform:none;letter-spacing:0;font-size:13.5px}
+
+/* ===== hero ===== */
+.hero{padding:44px 0 28px;text-align:center}
+.hero h1{font-family:var(--display);font-weight:800;font-size:clamp(38px,13vw,64px);
+  line-height:.93;letter-spacing:-.038em}
+.hero h1 em{font-style:normal;color:var(--flame-hot)}
+.hero p{margin-top:16px;font-size:15px;line-height:1.65;color:var(--dim);max-width:30ch;margin-inline:auto}
+
+.cta{display:block;width:100%;text-align:center;text-decoration:none;
+  border:1px solid var(--flame);background:color-mix(in srgb,var(--flame) 15%,transparent);
+  color:var(--text);font-family:var(--mono);font-size:14px;font-weight:500;
+  letter-spacing:.12em;text-transform:uppercase;padding:18px;border-radius:4px;margin-top:6px}
 .cta:active{opacity:.75}
 
-.verse{
-  margin-top:22px;padding:18px;border-left:2px solid var(--flame);
-  background:linear-gradient(90deg,color-mix(in srgb,var(--flame) 10%,transparent),transparent);
-  font-size:13px;line-height:1.7;color:var(--text);
-}
-.verse cite{display:block;margin-top:8px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--flame-hot);font-style:normal}
-
-/* ---- signals ---- */
-.stage{
-  flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:6px;padding:0 20px;text-align:center;min-height:0;
-}
-.eyebrow{font-size:11px;letter-spacing:.32em;text-transform:uppercase;color:var(--phase);height:14px;transition:color .35s}
-.call{
-  font-family:var(--display);font-weight:800;
-  font-size:clamp(52px,17vw,104px);line-height:.92;letter-spacing:-.03em;color:var(--dir);
-}
-.call--now{font-size:clamp(34px,11.5vw,72px);white-space:nowrap}
-.clock{
-  font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;
-  font-size:clamp(64px,24vw,132px);line-height:1;letter-spacing:-.05em;color:var(--text);
-}
+/* ===== signals ===== */
+.stage{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;padding:0 20px;text-align:center;min-height:0}
+.eyebrow{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--phase);
+  height:15px;transition:color .35s}
+.clock{font-family:var(--mono);font-weight:600;font-variant-numeric:tabular-nums;
+  font-size:clamp(66px,25vw,138px);line-height:1;letter-spacing:-.05em}
 .clock__unit{font-size:.28em;color:var(--dim);letter-spacing:.05em;margin-left:.1em}
-.reason{font-size:14px;line-height:1.45;max-width:30ch;margin-top:10px;opacity:.85}
-.idle{
-  font-family:var(--display);font-weight:600;
-  font-size:clamp(22px,6.5vw,32px);line-height:1.25;letter-spacing:-.02em;
-  color:var(--dim);max-width:18ch;
-}
+.call{font-family:var(--display);font-weight:800;font-size:clamp(52px,17vw,104px);
+  line-height:.92;letter-spacing:-.03em;color:var(--dir)}
+.call--now{font-size:clamp(34px,11.5vw,72px);white-space:nowrap}
+.reason{font-size:15px;line-height:1.5;max-width:30ch;margin-top:12px;opacity:.88}
+.at{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:15px}
+.idle{font-family:var(--display);font-weight:600;font-size:clamp(23px,6.5vw,33px);
+  line-height:1.25;letter-spacing:-.02em;color:var(--dim);max-width:18ch}
 
-.facts{display:flex;justify-content:center;flex-wrap:nowrap;flex:0 0 auto;padding:0 12px;margin-top:26px}
+.facts{display:flex;justify-content:center;flex-wrap:nowrap;flex:0 0 auto;padding:0 12px;margin-top:28px}
 .fact{padding:0 clamp(9px,3.2vw,16px);border-left:1px solid var(--edge);flex:0 0 auto}
 .fact:first-child{border-left:0}
-/* [hidden] is a UA display:none rule, which any author display rule
-   outranks. Without these the data row survives clear() and the last trade's
-   numbers sit under "waiting for the next setup". */
 .facts[hidden]{display:none}
 #live[hidden]{display:none}
-.fact__k{display:block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:3px;white-space:nowrap}
-.fact__v{font-size:15px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fact__k{display:block;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:4px;white-space:nowrap}
+.fact__v{font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap}
 
-.foot{flex:0 0 auto;padding:14px 20px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px}
-.btn{
-  width:100%;border:1px solid var(--edge);background:var(--panel);color:var(--text);
-  font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.12em;
-  text-transform:uppercase;padding:16px;border-radius:3px;cursor:pointer;
-  transition:border-color .2s,opacity .2s;
-}
+/* ===== buttons ===== */
+.foot{flex:0 0 auto;padding:14px 20px calc(18px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:10px}
+.btn{width:100%;border:1px solid var(--edge);background:var(--panel);color:var(--text);
+  font-family:var(--mono);font-size:14px;font-weight:500;letter-spacing:.12em;
+  text-transform:uppercase;padding:17px;border-radius:4px;cursor:pointer;
+  transition:border-color .2s,opacity .2s}
 .btn:hover{border-color:var(--brand)}
 .btn:active{opacity:.7}
 .btn[hidden]{display:none}
 .btn--on{border-color:color-mix(in srgb,var(--rise) 45%,transparent);color:var(--rise)}
-.hint{font-size:11px;line-height:1.55;color:var(--dim);text-align:center}
+.btn--buy{border-color:color-mix(in srgb,var(--rise) 50%,transparent);color:var(--rise)}
+.btn--sell{border-color:color-mix(in srgb,var(--fall) 50%,transparent);color:var(--fall)}
+.rowbtns{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:16px}
+.hint{font-size:12.5px;line-height:1.6;color:var(--dim);text-align:center}
 .hint b{color:var(--text);font-weight:500}
 .hint[hidden]{display:none}
 
-/* ---- tools ---- */
-h2.ph{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.025em;padding:26px 0 4px}
-p.pd{font-size:12.5px;color:var(--dim);line-height:1.6;margin-bottom:20px}
-
-label.f{display:block;margin-bottom:14px}
-label.f span{display:block;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
-input.f{
-  width:100%;background:var(--panel);border:1px solid var(--edge);border-radius:3px;
-  color:var(--text);font-family:var(--mono);font-size:16px;padding:13px;
-}
+/* ===== forms ===== */
+label.f{display:block;margin-bottom:15px}
+label.f span{display:block;font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:7px}
+input.f{width:100%;background:var(--panel);border:1px solid var(--edge);border-radius:4px;
+  color:var(--text);font-family:var(--mono);font-size:16px;padding:14px}
 input.f:focus{outline:none;border-color:var(--flame)}
+.seg{display:flex;gap:8px;margin-top:12px}
+.seg button{flex:1;background:var(--panel);border:1px solid var(--edge);color:var(--dim);
+  font-family:var(--mono);font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;
+  padding:13px 4px;border-radius:4px;cursor:pointer}
+.seg button.on{border-color:var(--brand);color:var(--text)}
 
-.out{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--edge);border:1px solid var(--edge);border-radius:3px;overflow:hidden;margin-top:6px}
-.out div{background:var(--panel);padding:15px}
-.out .k{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
-.out .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.out{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--edge);
+  border:1px solid var(--edge);border-radius:4px;overflow:hidden;margin-top:6px}
+.out div{background:var(--panel);padding:16px}
+.out .k{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.out .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
 
-.ses{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--edge)}
-.ses:last-child{border-bottom:0}
-.ses__n{flex:1 1 auto;font-size:14px}
-.ses__t{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
-.pill{font-size:9px;letter-spacing:.16em;text-transform:uppercase;padding:4px 9px;border-radius:2px;border:1px solid var(--edge);color:var(--dim)}
-.pill.on{color:var(--rise);border-color:color-mix(in srgb,var(--rise) 45%,transparent)}
-
-.setup{margin:auto;padding:24px;max-width:34ch;font-size:13px;line-height:1.6;color:var(--dim)}
-.setup code{color:var(--brand);font-size:12px}
-
-
-/* ---- new page furniture ---- */
-.curve{width:100%;display:block;margin-top:16px;border:1px solid var(--edge);border-radius:3px;background:color-mix(in srgb,var(--panel) 70%,transparent)}
-.candles{width:100%;display:block;margin-bottom:16px;border:1px solid var(--edge);border-radius:3px;background:color-mix(in srgb,var(--panel) 70%,transparent)}
-
-.verdict{padding:14px;border-radius:3px;font-size:12.5px;line-height:1.6;margin:4px 0 16px;border-left:2px solid var(--dim);background:rgba(255,255,255,.03)}
+.verdict{padding:16px;border-radius:4px;font-size:14px;line-height:1.65;margin:6px 0 18px;
+  border-left:3px solid var(--dim);background:rgba(255,255,255,.035)}
 .verdict.good{border-left-color:var(--rise)}
-.verdict.warn{border-left-color:#FFC24B}
+.verdict.warn{border-left-color:var(--warn)}
 .verdict.bad{border-left-color:var(--fall)}
 
-.rowbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-.btn--buy{border-color:color-mix(in srgb,var(--rise) 50%,transparent);color:var(--rise)}
-.btn--sell{border-color:color-mix(in srgb,var(--fall) 50%,transparent);color:var(--fall)}
+.curve,.candles,.spark{width:100%;display:block;border:1px solid var(--edge);
+  border-radius:4px;background:color-mix(in srgb,var(--panel) 72%,transparent)}
+.curve{margin-top:18px}
+.candles{margin-bottom:18px}
+.spark{margin:16px 0 4px}
 
-.simmsg{font-size:13px;line-height:1.6;color:var(--dim);text-align:center;min-height:38px}
+.ses{display:flex;align-items:center;gap:12px;padding:15px 0;border-bottom:1px solid var(--edge)}
+.ses:last-child{border-bottom:0}
+.ses__n{flex:1 1 auto;font-size:15px}
+.ses__t{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pill{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;padding:5px 10px;
+  border-radius:3px;border:1px solid var(--edge);color:var(--dim)}
+.pill.on{color:var(--rise);border-color:color-mix(in srgb,var(--rise) 45%,transparent)}
+
+.simmsg{font-size:14px;line-height:1.6;color:var(--dim);text-align:center;min-height:40px}
 .simmsg.good{color:var(--rise)}
 .simmsg.bad{color:var(--fall)}
 
-.seg{display:flex;gap:8px;margin-top:12px}
-.seg button{
-  flex:1;background:var(--panel);border:1px solid var(--edge);color:var(--dim);
-  font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
-  padding:12px 4px;border-radius:3px;cursor:pointer;
-}
-.seg button.on{border-color:var(--brand);color:var(--text)}
+.rel{display:flex;align-items:center;gap:10px;margin-top:11px}
+.rel__bar{flex:1;height:6px;border-radius:3px;background:var(--edge);overflow:hidden}
+.rel__fill{height:100%;background:var(--flame)}
+.rel__n{font-size:11.5px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
 
-.weeknav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.weeknav .wk{width:48px;flex:0 0 auto;padding:12px 0;font-size:16px}
-.wklabel{flex:1;text-align:center;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-
-.trade{position:relative;border:1px solid var(--edge);border-left-width:2px;border-radius:3px;padding:13px 40px 13px 13px;margin-top:10px;background:color-mix(in srgb,var(--panel) 80%,transparent)}
+/* ===== journal ===== */
+.weeknav{display:flex;align-items:center;gap:10px;margin-bottom:17px}
+.weeknav .wk{width:50px;flex:0 0 auto;padding:13px 0;font-size:17px}
+.wklabel{flex:1;text-align:center;font-size:12.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--dim)}
+.trade{position:relative;border:1px solid var(--edge);border-left-width:3px;border-radius:4px;
+  padding:14px 42px 14px 14px;margin-top:11px;background:color-mix(in srgb,var(--panel) 84%,transparent)}
 .trade.win{border-left-color:var(--rise)}
 .trade.loss{border-left-color:var(--fall)}
 .trade.draw{border-left-color:var(--dim)}
 .trade__top{display:flex;align-items:baseline;gap:9px}
-.trade__dir{font-size:11px;letter-spacing:.14em;font-weight:600}
+.trade__dir{font-size:11.5px;letter-spacing:.14em;font-weight:600}
 .trade__dir.up{color:var(--rise)} .trade__dir.down{color:var(--fall)}
-.trade__pair{flex:1;font-size:13px}
-.trade__pnl{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
-.trade__sub{font-size:11px;color:var(--dim);margin-top:5px;line-height:1.5}
-.trade__x{position:absolute;top:8px;right:8px;width:28px;height:28px;background:none;border:0;color:var(--dim);font-size:19px;cursor:pointer}
+.trade__pair{flex:1;font-size:14px}
+.trade__pnl{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums}
+.trade__sub{font-size:12px;color:var(--dim);margin-top:6px;line-height:1.55}
+.trade__x{position:absolute;top:9px;right:9px;width:30px;height:30px;background:none;
+  border:0;color:var(--dim);font-size:20px;cursor:pointer}
 
-.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
-.chip{
-  background:var(--panel);border:1px solid var(--edge);color:var(--dim);
-  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
-  padding:9px 13px;border-radius:999px;cursor:pointer;
-}
+/* ===== reading pages: bigger, calmer, serif ===== */
+.lesson{max-width:64ch}
+.lesson .kicker{font-size:11px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--flame-hot);padding-top:28px}
+.lesson h2{font-family:var(--display);font-weight:800;font-size:clamp(28px,8.5vw,38px);
+  letter-spacing:-.03em;line-height:1.08;margin:8px 0 14px}
+.lesson .lede{font-family:var(--read);font-size:19px;line-height:1.6;color:var(--text);
+  opacity:.92;margin-bottom:30px}
+.sec{margin-bottom:34px;padding-bottom:30px;border-bottom:1px solid var(--edge-soft)}
+.sec:last-child{border-bottom:0}
+.sec h3{font-family:var(--display);font-weight:600;font-size:21px;letter-spacing:-.015em;
+  margin-bottom:12px;color:var(--flame-hot)}
+.sec p{font-family:var(--read);font-size:18px;line-height:1.72;margin-bottom:15px;color:#DCE4F4}
+.sec p:last-child{margin-bottom:0}
+.sec strong{color:var(--text);font-weight:600}
+.keypoint{border-left:3px solid var(--brand);background:rgba(201,59,232,.07);
+  padding:16px 18px;border-radius:0 4px 4px 0;margin:20px 0}
+.keypoint p{font-size:17px;margin:0;color:var(--text)}
+.lessonnav{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:26px}
+
+.topics{display:grid;gap:12px;margin-bottom:10px}
+.topic{display:block;text-decoration:none;color:inherit;border:1px solid var(--edge);
+  border-radius:4px;padding:18px;background:color-mix(in srgb,var(--panel) 88%,transparent)}
+.topic:active{opacity:.8}
+.topic h3{font-family:var(--display);font-weight:600;font-size:18px;margin-bottom:6px}
+.topic p{font-size:13.5px;color:var(--dim);line-height:1.55}
+.topic__n{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--flame-hot);
+  display:block;margin-bottom:8px}
+
+/* ===== live sessions ===== */
+.session{border:1px solid var(--edge);border-radius:4px;padding:20px;margin-bottom:14px;
+  background:color-mix(in srgb,var(--panel) 88%,transparent);position:relative;overflow:hidden}
+.session::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--accent,var(--flame))}
+.session--signals{--accent:var(--brand)}
+.session--class{--accent:var(--flame)}
+.session--bible{--accent:var(--rise)}
+.session__k{font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--accent,var(--flame));margin-bottom:9px}
+.session h3{font-family:var(--display);font-weight:700;font-size:21px;letter-spacing:-.02em;margin-bottom:8px}
+.session p{font-size:14px;color:var(--dim);line-height:1.6;margin-bottom:14px}
+.session__when{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:15px}
+.tag{font-size:11px;letter-spacing:.08em;padding:6px 11px;border-radius:3px;
+  border:1px solid var(--edge);color:var(--dim)}
+.joinbtn{display:block;text-align:center;text-decoration:none;
+  border:1px solid var(--accent,var(--flame));color:var(--text);
+  background:color-mix(in srgb,var(--accent,var(--flame)) 14%,transparent);
+  font-family:var(--mono);font-size:13px;letter-spacing:.12em;text-transform:uppercase;
+  padding:15px;border-radius:4px}
+.joinbtn:active{opacity:.75}
+.joinbtn.off{border-color:var(--edge);color:#5A6785;
+  background:transparent;pointer-events:none}
+
+/* ===== bible ===== */
+.chips{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:22px}
+.chip{background:var(--panel);border:1px solid var(--edge);color:var(--dim);
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  padding:10px 14px;border-radius:999px;cursor:pointer}
 .chip.on{border-color:var(--brand);color:var(--brand)}
+.bigverse{padding:30px 22px;border-left:3px solid var(--flame);border-radius:0 4px 4px 0;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--flame) 13%,transparent),transparent);
+  margin-bottom:20px}
+.bigverse p{font-family:var(--read);font-weight:400;font-size:22px;line-height:1.55}
+.bigverse cite{display:block;margin-top:16px;font-family:var(--mono);font-style:normal;
+  font-size:11.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--flame-hot)}
+.devo{font-family:var(--read);font-size:17px;line-height:1.7;color:#DCE4F4;margin-top:6px}
 
-.bigverse{
-  padding:26px 20px;border-left:2px solid var(--flame);border-radius:3px;
-  background:linear-gradient(90deg,color-mix(in srgb,var(--flame) 12%,transparent),transparent);
-  margin-bottom:18px;
-}
-.bigverse p{font-family:var(--display);font-weight:600;font-size:19px;line-height:1.45;letter-spacing:-.01em}
-.bigverse cite{display:block;margin-top:14px;font-family:var(--mono);font-style:normal;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--flame-hot)}
+/* ===== resources ===== */
+.res{display:flex;align-items:flex-start;gap:14px;text-decoration:none;color:inherit;
+  border:1px solid var(--edge);border-radius:4px;padding:17px;margin-bottom:11px;
+  background:color-mix(in srgb,var(--panel) 88%,transparent)}
+.res:active{opacity:.8}
+.res__i{width:38px;height:38px;flex:0 0 auto;border-radius:4px;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--flame) 18%,transparent);color:var(--flame-hot);
+  font-size:17px;font-weight:600}
+.res__b{flex:1;min-width:0}
+.res__t{font-size:15px;font-weight:500;margin-bottom:4px}
+.res__d{font-size:13px;color:var(--dim);line-height:1.5}
+.res__x{font-size:11px;color:#5A6785;margin-top:6px;word-break:break-all}
+.groupname{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--dim);
+  margin:28px 0 13px;padding-bottom:9px;border-bottom:1px solid var(--edge)}
 
-a.card{display:block;color:inherit}
-
-.deskrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
-  margin-top:10px;padding-top:10px;border-top:1px solid var(--edge);
-  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
-.deskrow b{font-weight:500;color:var(--text);text-transform:none;letter-spacing:0;font-size:12.5px}
-
-.at{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:14px}
-
-.spark{width:100%;height:54px;display:block;margin:14px 0 4px;border:1px solid var(--edge);
-  border-radius:3px;background:color-mix(in srgb,var(--panel) 70%,transparent)}
-.rel{display:flex;align-items:center;gap:9px;margin-top:10px}
-.rel__bar{flex:1;height:5px;border-radius:3px;background:var(--edge);overflow:hidden}
-.rel__fill{height:100%;background:var(--flame)}
-.rel__n{font-size:11px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+.setup{margin:auto;padding:24px;max-width:34ch;font-size:14px;line-height:1.6;color:var(--dim)}
+.setup code{color:var(--brand);font-size:12.5px}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -339,7 +370,6 @@ a.card{display:block;color:inherit}
 
 <body>
 <canvas id="flames" aria-hidden="true"></canvas>
-
 <div class="scrim" id="scrim"></div>
 
 <nav class="menu" id="menu">
@@ -347,27 +377,31 @@ a.card{display:block;color:inherit}
   <div class="nav">
     <a href="#/home" data-route="home">Home</a>
     <a href="#/signals" data-route="signals">Signals</a>
+    <a href="#/sessions-live" data-route="sessions-live">Live sessions</a>
 
-    <div class="nav__group" id="grpTools">
-      <button type="button">Trading tools</button>
-      <div class="nav__sub">
-        <a href="#/risk" data-route="risk">Risk calculator</a>
-        <a href="#/sessions" data-route="sessions">Session clock</a>
-      </div>
-    </div>
-
+    <div class="nav__label">Learn</div>
     <div class="nav__group" id="grpLearn">
       <button type="button">Learn to trade</button>
       <div class="nav__sub">
+        <a href="#/learn" data-route="learn">All lessons</a>
         <a href="#/patterns" data-route="patterns">Candle patterns</a>
-        <a href="#/basics" data-route="basics">Trading basics</a>
         <a href="#/sim" data-route="sim">Trade simulator</a>
       </div>
     </div>
 
+    <div class="nav__label">Tools</div>
+    <div class="nav__group" id="grpTools">
+      <button type="button">Trading tools</button>
+      <div class="nav__sub">
+        <a href="#/risk" data-route="risk">Risk calculator</a>
+        <a href="#/clock" data-route="clock">Session clock</a>
+        <a href="#/journal" data-route="journal">Trade journal</a>
+      </div>
+    </div>
+
     <div class="nav__sep"></div>
-    <a href="#/journal" data-route="journal">Trade journal</a>
     <a href="#/bible" data-route="bible">Mini Bible</a>
+    <a href="#/resources" data-route="resources">Trading resources</a>
     <div class="nav__sep"></div>
     <a href="#/alerts" data-route="alerts">Alerts &amp; setup</a>
   </div>
@@ -396,12 +430,8 @@ a.card{display:block;color:inherit}
         <div class="card__k">Feed status</div>
         <div class="card__v" id="hStatus">Connecting</div>
         <div class="card__note" id="hNote">Checking in with the desk.</div>
-        <div class="deskrow">
-          <span>Last check-in</span><b id="hLast">—</b>
-        </div>
-        <div class="deskrow">
-          <span>Last signal</span><b id="hLastSig">None yet</b>
-        </div>
+        <div class="deskrow"><span>Last check-in</span><b id="hLast">—</b></div>
+        <div class="deskrow"><span>Last signal</span><b id="hLastSig">None yet</b></div>
       </div>
 
       <div class="grid2">
@@ -417,21 +447,27 @@ a.card{display:block;color:inherit}
 
       <a class="cta" href="#/signals">Open live signals</a>
 
-      <div class="grid2" style="margin-top:12px">
-        <a class="card" href="#/journal" style="text-decoration:none;margin:0">
+      <div class="grid2" style="margin-top:13px">
+        <a class="card" href="#/journal">
           <div class="card__k">This week</div>
           <div class="card__v" id="hWeek" style="font-size:19px">—</div>
           <div class="card__note" id="hWeekN">No trades logged.</div>
         </a>
-        <a class="card" href="#/sim" style="text-decoration:none;margin:0">
-          <div class="card__k">Practice</div>
-          <div class="card__v" style="font-size:19px">Simulator</div>
-          <div class="card__note">Read candles with nothing at stake.</div>
+        <a class="card" href="#/learn">
+          <div class="card__k">Learn</div>
+          <div class="card__v" style="font-size:19px">Lessons</div>
+          <div class="card__note">Seven topics, plain English.</div>
         </a>
       </div>
 
-      <div class="verse">
-        <span id="hVerse">He shall baptize you with the Holy Ghost, and with fire.</span>
+      <a class="card" href="#/sessions-live" style="margin-top:13px">
+        <div class="card__k">Live sessions</div>
+        <div class="card__v" style="font-size:19px">Join on Zoom</div>
+        <div class="card__note">Signal room, trading class, and Bible study.</div>
+      </a>
+
+      <div class="bigverse" style="margin-top:20px">
+        <p id="hVerse">He shall baptize you with the Holy Ghost, and with fire.</p>
         <cite id="hVerseRef">Matthew 3:11</cite>
       </div>
     </div>
@@ -441,7 +477,6 @@ a.card{display:block;color:inherit}
   <section class="page" id="p-signals">
     <main class="stage">
       <p class="idle" id="idle">Waiting for the next setup.</p>
-
       <div id="live" hidden>
         <p class="eyebrow" id="eyebrow"></p>
         <p class="clock"><span id="clockNum">0</span><span class="clock__unit">s</span></p>
@@ -449,7 +484,6 @@ a.card{display:block;color:inherit}
         <p class="reason" id="reason"></p>
         <p class="at" id="at"></p>
       </div>
-
       <section class="facts" id="facts" hidden>
         <div class="fact"><span class="fact__k">Confidence</span><span class="fact__v" id="fConf">—</span></div>
         <div class="fact"><span class="fact__k">Grade</span><span class="fact__v" id="fGrade">—</span></div>
@@ -459,48 +493,72 @@ a.card{display:block;color:inherit}
     </main>
   </section>
 
-  <!-- ===================== RISK ===================== -->
-  <section class="page" id="p-risk">
+  <!-- ===================== LIVE SESSIONS ===================== -->
+  <section class="page" id="p-sessions-live">
     <div class="scroll">
-      <h2 class="ph">Risk calculator</h2>
-      <p class="pd">Binary payouts are lopsided: a loss takes the whole stake, a win returns only the payout. This works out whether your edge survives that, and what it does to the account over time.</p>
+      <h2 class="ph">Live sessions</h2>
+      <p class="pd">Three separate rooms, each with its own link. Nothing shared between them.</p>
 
-      <div class="grid2" style="gap:10px">
-        <label class="f"><span>Balance</span><input class="f" id="kBal" type="number" inputmode="decimal" value="1000"></label>
-        <label class="f"><span>Risk per trade %</span><input class="f" id="kRisk" type="number" inputmode="decimal" value="2"></label>
-        <label class="f"><span>Payout %</span><input class="f" id="kPay" type="number" inputmode="decimal" value="80"></label>
-        <label class="f"><span>Your win rate %</span><input class="f" id="kWin" type="number" inputmode="decimal" value="65"></label>
+      <div class="session session--signals">
+        <div class="session__k">Room 1 · Signals</div>
+        <h3>Live signal room</h3>
+        <p>Watch the desk call entries in real time and ask questions as they fire.</p>
+        <div class="session__when">
+          <span class="tag" id="s1When">Market hours</span>
+          <span class="tag" id="s1Note">Link opens when live</span>
+        </div>
+        <a class="joinbtn" id="s1Btn" href="#" target="_blank" rel="noopener">Join signal room</a>
       </div>
 
-      <div class="verdict" id="kVerdict"></div>
-
-      <div class="out">
-        <div><div class="k">Stake</div><div class="v" id="kStake">—</div></div>
-        <div><div class="k">Break-even win rate</div><div class="v" id="kBE">—</div></div>
-        <div><div class="k">Edge per trade</div><div class="v" id="kEdge">—</div></div>
-        <div><div class="k">Expected per trade</div><div class="v" id="kEV">—</div></div>
-        <div><div class="k">Likely worst streak (100)</div><div class="v" id="kStreak">—</div></div>
-        <div><div class="k">Drawdown from it</div><div class="v" id="kDD">—</div></div>
-        <div><div class="k">Kelly says risk</div><div class="v" id="kKelly">—</div></div>
-        <div><div class="k">After 100 trades</div><div class="v" id="kProj">—</div></div>
+      <div class="session session--class">
+        <div class="session__k">Room 2 · Teaching</div>
+        <h3>Trading class</h3>
+        <p>Walkthroughs of setups, chart reading, and risk — the material from the lessons, taught live.</p>
+        <div class="session__when">
+          <span class="tag" id="s2When">Weekly</span>
+          <span class="tag" id="s2Note">Bring questions</span>
+        </div>
+        <a class="joinbtn" id="s2Btn" href="#" target="_blank" rel="noopener">Join trading class</a>
       </div>
 
-      <canvas id="kCurve" class="curve"></canvas>
-      <p class="pd" id="kNote" style="margin-top:12px"></p>
+      <div class="session session--bible">
+        <div class="session__k">Room 3 · Faith</div>
+        <h3>Bible class</h3>
+        <p>Scripture study and prayer. Open to everyone, no trading experience needed.</p>
+        <div class="session__when">
+          <span class="tag" id="s3When">Weekly</span>
+          <span class="tag" id="s3Note">All welcome</span>
+        </div>
+        <a class="joinbtn" id="s3Btn" href="#" target="_blank" rel="noopener">Join Bible class</a>
+      </div>
+
+      <p class="hint" style="margin-top:20px">Links are set near the top of <b>index.html</b>. Any room left blank shows as unavailable rather than opening a dead link.</p>
     </div>
   </section>
 
-  <!-- ===================== SESSIONS ===================== -->
-  <section class="page" id="p-sessions">
+  <!-- ===================== LEARN HUB ===================== -->
+  <section class="page" id="p-learn">
     <div class="scroll">
-      <h2 class="ph">Session clock</h2>
-      <p class="pd">OTC pairs run around the clock, but liquidity still tracks the majors. Overlaps carry the heaviest flow.</p>
-      <div id="sesList"></div>
-      <div class="card" style="margin-top:20px">
-        <div class="card__k">Your local time</div>
-        <div class="card__v" id="localTime">—</div>
-        <div class="card__note" id="overlapNote"></div>
-      </div>
+      <h2 class="ph">Learn to trade</h2>
+      <p class="pd">Seven topics, in the order they build on each other. Each one stands alone if you'd rather jump straight to it.</p>
+      <div class="topics" id="topicList"></div>
+    </div>
+  </section>
+
+  <!-- ===================== LESSON READER ===================== -->
+  <section class="page" id="p-lesson">
+    <div class="scroll">
+      <article class="lesson">
+        <p class="kicker" id="lKicker">—</p>
+        <h2 id="lTitle">—</h2>
+        <p class="lede" id="lLede"></p>
+        <div id="lBody"></div>
+        <div class="lessonnav">
+          <button class="btn" id="lPrev">Previous</button>
+          <button class="btn" id="lNext">Next</button>
+        </div>
+        <p class="hint" style="margin-top:14px"><a href="#/learn" style="color:var(--flame-hot)">All lessons</a></p>
+      </article>
     </div>
   </section>
 
@@ -508,13 +566,13 @@ a.card{display:block;color:inherit}
   <section class="page" id="p-patterns">
     <div class="scroll">
       <h2 class="ph">Candle patterns</h2>
-      <p class="pd">Every pattern below is drawn to scale. Learn the shape first, then what it implies — and where it fails.</p>
+      <p class="pd">Every pattern is drawn to scale. Learn the shape, what it implies, and where it lets you down.</p>
 
       <canvas id="patCanvas" class="candles"></canvas>
 
       <div class="card">
         <div class="card__k" id="patKind">—</div>
-        <div class="card__v" id="patName" style="font-size:21px">—</div>
+        <div class="card__v" id="patName" style="font-size:22px">—</div>
         <div class="card__note" id="patWhat"></div>
       </div>
 
@@ -541,16 +599,7 @@ a.card{display:block;color:inherit}
         <button class="btn" id="patPrev">Back</button>
         <button class="btn" id="patNext">Next</button>
       </div>
-      <p class="hint" id="patCount" style="margin-top:12px"></p>
-    </div>
-  </section>
-
-  <!-- ===================== BASICS ===================== -->
-  <section class="page" id="p-basics">
-    <div class="scroll">
-      <h2 class="ph">Trading basics</h2>
-      <p class="pd">Short lessons, in the order they actually matter.</p>
-      <div id="lessons"></div>
+      <p class="hint" id="patCount" style="margin-top:14px"></p>
     </div>
   </section>
 
@@ -563,7 +612,7 @@ a.card{display:block;color:inherit}
       <canvas id="simCanvas" class="candles"></canvas>
       <canvas id="simSpark" class="spark"></canvas>
 
-      <div class="out" style="margin-bottom:14px">
+      <div class="out" style="margin-bottom:16px">
         <div><div class="k">Balance</div><div class="v" id="simBal">—</div></div>
         <div><div class="k">Win rate</div><div class="v" id="simWR">—</div></div>
         <div><div class="k">Record</div><div class="v" id="simRec">0–0</div></div>
@@ -578,7 +627,52 @@ a.card{display:block;color:inherit}
         <button class="btn btn--buy" id="simUp">Buy</button>
         <button class="btn btn--sell" id="simDown">Sell</button>
       </div>
-      <button class="btn" id="simReset" style="margin-top:10px">Reset practice</button>
+      <button class="btn" id="simReset" style="margin-top:11px">Reset practice</button>
+    </div>
+  </section>
+
+  <!-- ===================== RISK ===================== -->
+  <section class="page" id="p-risk">
+    <div class="scroll">
+      <h2 class="ph">Risk calculator</h2>
+      <p class="pd">Binary payouts are lopsided: a loss takes the whole stake, a win returns only the payout. This works out whether your edge survives that.</p>
+
+      <div class="grid2" style="gap:11px">
+        <label class="f"><span>Balance</span><input class="f" id="kBal" type="number" inputmode="decimal" value="1000"></label>
+        <label class="f"><span>Risk per trade %</span><input class="f" id="kRisk" type="number" inputmode="decimal" value="2"></label>
+        <label class="f"><span>Payout %</span><input class="f" id="kPay" type="number" inputmode="decimal" value="80"></label>
+        <label class="f"><span>Your win rate %</span><input class="f" id="kWin" type="number" inputmode="decimal" value="65"></label>
+      </div>
+
+      <div class="verdict" id="kVerdict"></div>
+
+      <div class="out">
+        <div><div class="k">Stake</div><div class="v" id="kStake">—</div></div>
+        <div><div class="k">Break-even win rate</div><div class="v" id="kBE">—</div></div>
+        <div><div class="k">Edge per trade</div><div class="v" id="kEdge">—</div></div>
+        <div><div class="k">Expected per trade</div><div class="v" id="kEV">—</div></div>
+        <div><div class="k">Likely worst streak</div><div class="v" id="kStreak">—</div></div>
+        <div><div class="k">Drawdown from it</div><div class="v" id="kDD">—</div></div>
+        <div><div class="k">Kelly says risk</div><div class="v" id="kKelly">—</div></div>
+        <div><div class="k">After 100 trades</div><div class="v" id="kProj">—</div></div>
+      </div>
+
+      <canvas id="kCurve" class="curve"></canvas>
+      <p class="pd" id="kNote" style="margin-top:14px"></p>
+    </div>
+  </section>
+
+  <!-- ===================== SESSION CLOCK ===================== -->
+  <section class="page" id="p-clock">
+    <div class="scroll">
+      <h2 class="ph">Session clock</h2>
+      <p class="pd">OTC pairs run around the clock, but liquidity still tracks the majors. Overlaps carry the heaviest flow.</p>
+      <div id="sesList"></div>
+      <div class="card" style="margin-top:22px">
+        <div class="card__k">Your local time</div>
+        <div class="card__v" id="localTime">—</div>
+        <div class="card__note" id="overlapNote"></div>
+      </div>
     </div>
   </section>
 
@@ -594,20 +688,20 @@ a.card{display:block;color:inherit}
         <button class="btn wk" id="wkNext">›</button>
       </div>
 
-      <div class="out" style="margin-bottom:16px">
+      <div class="out" style="margin-bottom:18px">
         <div><div class="k">Trades</div><div class="v" id="jN">0</div></div>
         <div><div class="k">Win rate</div><div class="v" id="jWR">—</div></div>
         <div><div class="k">Net</div><div class="v" id="jNet">$0.00</div></div>
         <div><div class="k">Best day</div><div class="v" id="jBest">—</div></div>
       </div>
 
-      <canvas id="jChart" class="curve"></canvas>
+      <canvas id="jChart" class="curve" style="margin-top:0"></canvas>
 
-      <div class="card">
+      <div class="card" style="margin-top:18px">
         <div class="card__k">Log a trade</div>
-        <div class="grid2" style="gap:10px;margin-top:12px">
+        <div class="grid2" style="gap:11px;margin-top:13px">
           <label class="f"><span>Date</span><input class="f" id="jDate" type="date"></label>
-          <label class="f"><span>Pair</span><input class="f" id="jPair" type="text" placeholder="AUD/CAD OTC"></label>
+          <label class="f"><span>Pair</span><input class="f" id="jPair" type="text" placeholder="AUD/CHF OTC"></label>
           <label class="f"><span>Stake</span><input class="f" id="jStake" type="number" inputmode="decimal" value="20"></label>
           <label class="f"><span>Payout %</span><input class="f" id="jPay" type="number" inputmode="decimal" value="80"></label>
         </div>
@@ -620,13 +714,13 @@ a.card{display:block;color:inherit}
           <button data-v="loss">Loss</button>
           <button data-v="draw">Refund</button>
         </div>
-        <label class="f" style="margin-top:12px"><span>Note</span><input class="f" id="jNote" type="text" placeholder="Why you took it"></label>
+        <label class="f" style="margin-top:13px"><span>Note</span><input class="f" id="jNote" type="text" placeholder="Why you took it"></label>
         <button class="btn" id="jAdd">Add trade</button>
       </div>
 
       <div id="jList"></div>
 
-      <div class="rowbtns" style="margin-top:16px">
+      <div class="rowbtns" style="margin-top:18px">
         <button class="btn" id="jExport">Export JSON</button>
         <button class="btn" id="jWipe">Erase all</button>
       </div>
@@ -646,8 +740,36 @@ a.card{display:block;color:inherit}
         <cite id="bRef">—</cite>
       </div>
 
+      <div class="card">
+        <div class="card__k">Reflection</div>
+        <p class="devo" id="bDevo"></p>
+      </div>
+
       <button class="btn" id="bNext">Another verse</button>
-      <p class="hint" style="margin-top:14px">Verses are stored in this file. No connection needed.</p>
+
+      <div class="groupname">Daily reading</div>
+      <div class="card">
+        <div class="card__k" id="bDayK">Today</div>
+        <div class="card__v" style="font-size:19px" id="bDayRef">—</div>
+        <p class="devo" id="bDayText"></p>
+      </div>
+
+      <div class="groupname">Study together</div>
+      <div class="session session--bible">
+        <div class="session__k">Bible class</div>
+        <h3>Weekly study on Zoom</h3>
+        <p>Read together, ask questions, pray. No trading talk — this room is only for scripture.</p>
+        <a class="joinbtn" id="s3Btn2" href="#" target="_blank" rel="noopener">Join Bible class</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== RESOURCES ===================== -->
+  <section class="page" id="p-resources">
+    <div class="scroll">
+      <h2 class="ph">Trading resources</h2>
+      <p class="pd">Links, tools, and references worth keeping. Edit the list near the bottom of index.html.</p>
+      <div id="resList"></div>
     </div>
   </section>
 
@@ -658,63 +780,87 @@ a.card{display:block;color:inherit}
       <p class="pd">Signals appear on the Signals page whenever this app is open. Lock-screen alerts need one extra step on iPhone.</p>
       <div class="card">
         <div class="card__k">Notifications</div>
-        <div class="card__v" id="aState" style="font-size:19px">—</div>
+        <div class="card__v" id="aState" style="font-size:20px">—</div>
         <div class="card__note" id="aNote"></div>
       </div>
       <button class="btn" id="enable">Turn on alerts</button>
-      <p class="hint" id="hint" hidden style="margin-top:12px"></p>
+      <p class="hint" id="hint" hidden style="margin-top:14px"></p>
     </div>
   </section>
 </div>
-
 <script type="module">
 /* =======================================================================
-   CONFIG — replace these three values, then deploy.
+   CONFIG
    ======================================================================= */
-const SUPABASE_URL  = "https://iwlhawbdvnqledgppeyw.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bGhhd2Jkdm5xbGVkZ3BwZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMDEwMDYsImV4cCI6MjEwMTc3NzAwNn0.KZNdJqlLOkNytaX2e-NfdDakvqYs9zyxlmEbgZdr69Q";
-const VAPID_PUBLIC  = "BM83ph4iJnym10fZCKXkWGmQfg1T4_Ip92T0S80NPrDDkdTRrbiiw0g1KgldkYP9Uoldv_TF1UAWQS2MkZaFmYE";
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON = "YOUR-ANON-KEY";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
+
+/* Zoom rooms. Leave a link empty and its button shows as unavailable
+   instead of opening a dead page. */
+const ZOOM = {
+  signals: { url:"", when:"Market hours",  note:"Link opens when live" },
+  class:   { url:"", when:"Weekly",        note:"Bring questions" },
+  bible:   { url:"", when:"Weekly",        note:"All welcome" },
+};
+
+/* Trading resources. Add, remove, or regroup freely. */
+const RESOURCES = [
+  { group:"Charting", items:[
+    { t:"TradingView", d:"Free charting with alerts and a huge indicator library.", u:"https://www.tradingview.com" },
+    { t:"Investing.com economic calendar", d:"Scheduled news releases. Avoid entries around high-impact events.", u:"https://www.investing.com/economic-calendar/" },
+  ]},
+  { group:"Reference", items:[
+    { t:"Babypips School of Pipsology", d:"Free structured course covering the fundamentals end to end.", u:"https://www.babypips.com/learn/forex" },
+    { t:"Session clock", d:"Which markets are open right now and where the overlaps fall.", u:"#/clock" },
+  ]},
+  { group:"Your tools", items:[
+    { t:"Risk calculator", d:"Stake sizing, break-even rate, and what a losing streak costs you.", u:"#/risk" },
+    { t:"Trade journal", d:"Log every trade and track the week. Saved on this device.", u:"#/journal" },
+    { t:"Trade simulator", d:"Practise reading candles with nothing at stake.", u:"#/sim" },
+  ]},
+];
 /* ===================================================================== */
 
 const $ = (id) => document.getElementById(id);
 const now = () => Date.now() / 1000;
-const money = (n) => (n < 0 ? "−$" : "$") + Math.abs(n).toLocaleString(undefined,
-  { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money = (n) => (n<0?"−$":"$") + Math.abs(n).toLocaleString(undefined,
+  {minimumFractionDigits:2,maximumFractionDigits:2});
 const numv = (id) => parseFloat($(id).value) || 0;
+const esc = (s) => String(s).replace(/[<>&]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));
 
 /* =======================================================================
-   FLAMES — blue into black, rising from a burning base.
+   FLAMES
    ======================================================================= */
 (function flames(){
-  const cv = $("flames"), ctx = cv.getContext("2d");
+  const cv=$("flames"), ctx=cv.getContext("2d");
   let W=0,H=0,dpr=1,parts=[],bolts=[],raf=0,t0=0;
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function size(){
-    dpr = Math.min(devicePixelRatio||1, 2);
-    W = cv.clientWidth; H = cv.clientHeight;
-    cv.width = W*dpr; cv.height = H*dpr;
+    dpr=Math.min(devicePixelRatio||1,2);
+    W=cv.clientWidth; H=cv.clientHeight;
+    cv.width=W*dpr; cv.height=H*dpr;
     ctx.setTransform(dpr,0,0,dpr,0,0);
   }
   function newPart(y){
-    const reach = 0.34 + Math.random()*0.62;
-    return { x:Math.random()*W, y: y===undefined ? H+Math.random()*60 : y,
+    const reach=0.34+Math.random()*0.62;
+    return { x:Math.random()*W, y:y===undefined?H+Math.random()*60:y,
       r:10+Math.random()*34, v:0.5+Math.random()*1.5, drift:(Math.random()-0.5)*0.5,
       wob:Math.random()*Math.PI*2, top:H*(1-reach), heat:Math.random() };
   }
   function newBolt(y){
-    return { x:20+Math.random()*(W-40), y: y===undefined ? H+40 : y,
-      s:9+Math.random()*9, v:0.35+Math.random()*0.5, sway:Math.random()*Math.PI*2,
-      a:0.25+Math.random()*0.4 };
+    return { x:20+Math.random()*(W-40), y:y===undefined?H+40:y, s:9+Math.random()*9,
+      v:0.35+Math.random()*0.5, sway:Math.random()*Math.PI*2, a:0.25+Math.random()*0.4 };
   }
   function seed(){
-    parts=[]; const n=Math.round(Math.min(220, W/2.2));
+    parts=[]; const n=Math.round(Math.min(220,W/2.2));
     for(let i=0;i<n;i++) parts.push(newPart(H-Math.random()*H*0.9));
     bolts=[]; for(let i=0;i<7;i++) bolts.push(newBolt(Math.random()*H));
   }
   function drawBolt(b){
     const s=b.s;
-    ctx.save(); ctx.translate(b.x+Math.sin(b.sway)*14, b.y);
+    ctx.save(); ctx.translate(b.x+Math.sin(b.sway)*14,b.y);
     ctx.globalAlpha=b.a; ctx.fillStyle="#8FD4FF";
     ctx.shadowColor="#2D6BFF"; ctx.shadowBlur=14;
     ctx.beginPath();
@@ -725,8 +871,6 @@ const numv = (id) => parseFloat($(id).value) || 0;
   function frame(){
     ctx.clearRect(0,0,W,H);
     ctx.globalCompositeOperation="lighter";
-
-    // The bed of the fire — without it the licks read as drifting sparks.
     t0+=0.016;
     const bedH=H*0.42, breathe=0.85+Math.sin(t0*0.8)*0.15;
     const bed=ctx.createLinearGradient(0,H,0,H-bedH);
@@ -743,8 +887,8 @@ const numv = (id) => parseFloat($(id).value) || 0;
       if(alpha>0.004){
         const hot=p.heat*(1-prog), rx=p.r*(1-prog*0.55), ry=rx*2.1;
         ctx.save(); ctx.translate(p.x,p.y); ctx.scale(1,ry/rx);
-        // Built after the transform: a gradient made in page coordinates
-        // lands at double the offset once translated, and vanishes.
+        // Built after the transform — a gradient made in page coordinates
+        // lands at double the offset once translated, and disappears.
         const g=ctx.createRadialGradient(0,0,0,0,0,rx);
         g.addColorStop(0,`rgba(${Math.round(130+125*hot)},${Math.round(200+45*hot)},255,${(0.40*alpha).toFixed(3)})`);
         g.addColorStop(0.40,`rgba(45,107,255,${(0.24*alpha).toFixed(3)})`);
@@ -760,7 +904,6 @@ const numv = (id) => parseFloat($(id).value) || 0;
   }
   const start=()=>{ if(!raf&&!reduce) raf=requestAnimationFrame(frame); };
   const stop =()=>{ cancelAnimationFrame(raf); raf=0; };
-
   size(); seed();
   if(reduce){ frame(); stop(); } else start();
   addEventListener("resize",()=>{ size(); seed(); });
@@ -769,14 +912,141 @@ const numv = (id) => parseFloat($(id).value) || 0;
 })();
 
 /* =======================================================================
+   LESSONS — original material written for this app
+   ======================================================================= */
+const LESSONS=[
+  { id:"basics", kicker:"Lesson 1", title:"What you're actually betting on",
+    blurb:"Payout maths, and the accuracy you need before any strategy matters.",
+    lede:"Before a single chart, one number decides whether you can win at all: the payout. Everything else is built on top of it.",
+    sections:[
+      { h:"The payout sets the bar",
+        p:["A binary trade is lopsided. Win and you collect the payout — at 80%, a $100 stake returns $80 profit. Lose and the whole $100 is gone. The upside is smaller than the downside on every single trade.",
+           "That asymmetry means breaking even needs better than half your trades to win. At an 80% payout the break-even accuracy is 55.6%. At 70% it climbs to 58.8%. At 60% you need 62.5%.",
+           "Most people trading binaries have never worked out this number for the payouts they're actually being quoted. They think 50% accuracy is neutral. It isn't — it's a steady loss."] },
+      { h:"Where the number comes from",
+        p:["To break even, what you win on the winners must equal what you lose on the losers. If <strong>w</strong> is your win rate and <strong>p</strong> is the payout as a decimal, that's w × p = (1 − w). Rearranged: w = 1 ÷ (1 + p).",
+           "Plug in 0.8 for an 80% payout and you get 0.556. That's the whole derivation. The risk calculator in this app does it for you, but doing it once by hand makes it stick."] },
+      { h:"Payout differences compound",
+        p:["A pair quoted at 85% needs 54.1% accuracy. The same pair at 65% needs 60.6%. That's a six-point swing in the skill required, from the broker's number alone, before you've analysed anything.",
+           "This is why checking the payout before entering matters as much as the setup. Taking a good setup at a poor payout can be worse than passing on it."] },
+    ],
+    key:"Work out your break-even accuracy first. If your honest win rate is below it, no amount of chart work fixes the arithmetic." },
+
+  { id:"charts", kicker:"Lesson 2", title:"Reading a chart",
+    blurb:"Candles, structure, and the levels price actually reacts to.",
+    lede:"A candle is four numbers: where price opened, how high it got, how low it got, and where it closed. Everything else is interpretation.",
+    sections:[
+      { h:"What a candle tells you",
+        p:["The body spans open to close. The wicks reach out to the high and the low. A long body means one side controlled the whole period. A small body with long wicks means both sides pushed and neither held ground.",
+           "Where the close lands inside the range is the most useful single detail. A candle that closes at its high says buyers were still in control at the bell. One that closes mid-range says the push faded before time ran out."] },
+      { h:"Structure beats indicators",
+        p:["Markets move in swings. A series of higher highs and higher lows is an uptrend; lower highs and lower lows is a downtrend; neither is a range.",
+           "Naming the structure before anything else keeps you from fighting the dominant flow. Most losing trades are technically fine signals taken against the larger direction."] },
+      { h:"Levels are where reactions happen",
+        p:["A level is a price where something already happened — a prior high, a prior low, a round number, the edge of a range. Price tends to react at these because that's where other traders placed orders.",
+           "A signal in open space is weaker than the same signal at a level. The level supplies the reason; the candle only supplies the timing."] },
+      { h:"On short timeframes",
+        p:["A 30-second candle carries far less information than a daily one. Noise dominates. That's why very short-term systems lean on momentum and exhaustion rather than tidy structure — there simply isn't enough time for structure to form.",
+           "Expect a lower hit rate on fast timeframes than the same idea would give on slower ones, and size accordingly."] },
+    ],
+    key:"Name the structure, mark the levels, then look at candles. In that order — reversing it is how people talk themselves into bad trades." },
+
+  { id:"patterns-lesson", kicker:"Lesson 3", title:"Patterns and what they mean",
+    blurb:"Reversal and continuation shapes, and the context they need.",
+    lede:"Candle patterns are shorthand for a story about who won the last few periods. The shape is easy; knowing when it counts is the hard part.",
+    sections:[
+      { h:"Reversal shapes",
+        p:["An engulfing candle completely covers the previous one's body. It says one side gave up everything it gained and then some. A hammer has a long lower wick and a small body up top — price was pushed down hard and rejected before the close. A shooting star is the same idea inverted.",
+           "All of them mean more at the end of an extended move than in the middle of one. A hammer after five down candles is information. A hammer in the middle of a range is a coin flip."] },
+      { h:"Continuation shapes",
+        p:["Three strong candles in the same direction, each closing near its extreme, suggest steady pressure rather than a single spike. An inside bar — a candle whose entire range fits within the previous one — says volatility is contracting and something is coiling.",
+           "Continuation patterns are about the trend persisting, not turning. Confusing the two categories is a common and expensive mistake."] },
+      { h:"The context test",
+        p:["Before acting on any pattern, ask three things. Is it at a level that already mattered? Is it against an extended move or in the middle of one? Is the pattern large relative to recent candles, or is it ordinary?",
+           "Three yeses is a setup. One yes is a shape you noticed."] },
+    ],
+    key:"The pattern is the trigger, never the reason. If you can't say what level it's reacting to, you don't have a trade." },
+
+  { id:"waves", kicker:"Lesson 4", title:"Trends move in waves",
+    blurb:"Impulse and correction, and why trends don't travel in straight lines.",
+    lede:"Price rarely goes straight anywhere. It pushes, pauses, gives some back, then pushes again. Recognising which phase you're in is most of the work.",
+    sections:[
+      { h:"Two kinds of movement",
+        p:["<strong>Impulsive</strong> movement travels far in little time. Candles are large, bodies dominate wicks, pullbacks are shallow. It has an urgent feel to it.",
+           "<strong>Corrective</strong> movement is slow and overlapping. Candles are smaller, direction keeps changing, progress is grudging. It looks messy because it is messy.",
+           "Telling them apart matters more than any label you put on them. Impulsive movement tells you the dominant direction. Corrective movement tells you the market is resting, and where it rests is often where you want to enter with the trend."] },
+      { h:"Why counting waves is popular",
+        p:["Several schools of analysis break trends into numbered pushes separated by numbered pullbacks. The details differ, but they share one useful idea: a trend has a beginning, a strong middle, and a tired end, and knowing roughly where you are changes what you should do.",
+           "Early in a move, joining pullbacks makes sense. Late in a move, the same pullback entry is far more likely to be the top."] },
+      { h:"The honest caveat",
+        p:["Wave counts are interpretations, not measurements. Two skilled analysts can label the same chart differently and both defend it. Anything that can be relabelled after the fact should be treated as a way of organising your thinking, not a prediction you bet the account on.",
+           "Use it to ask better questions — is this move energetic or sluggish, early or late — rather than to forecast exact turning points."] },
+    ],
+    key:"You don't need a formal count. You need to know whether the current move is energetic or tired, and whether you're joining the trend or fading it." },
+
+  { id:"fibonacci", kicker:"Lesson 5", title:"Fibonacci levels",
+    blurb:"Where pullbacks tend to end, and why the levels work at all.",
+    lede:"After a move, price usually gives some of it back. Fibonacci ratios mark the depths where that giving-back tends to stop.",
+    sections:[
+      { h:"The ratios in practice",
+        p:["The commonly watched retracement levels are 38.2%, 50%, and 61.8% of the prior move. Some traders add 23.6% and 78.6%.",
+           "Measure from the start of a move to its end, and those percentages mark candidate levels for the pullback to finish. A shallow 38.2% retracement suggests strong underlying pressure. A deep 61.8% suggests the move is being seriously questioned."] },
+      { h:"Why they work",
+        p:["Partly geometry, partly self-fulfilment. Enough traders watch the same levels that orders cluster there, and clustered orders create reactions. That's a real effect regardless of whether you find the mathematics persuasive.",
+           "It also means the levels work best on timeframes and instruments where lots of people are watching. On obscure assets and very fast charts, the effect is weaker."] },
+      { h:"Zones, not lines",
+        p:["Treat a Fibonacci level as a zone a few ticks wide, not an exact price. Expect overshoots and undershoots. A level that price slices straight through was telling you something too.",
+           "The strongest areas are where several methods point at the same price — a retracement level that also sits on a prior high, for instance. One level is a guess. Three overlapping is a location."] },
+    ],
+    key:"Fibonacci narrows where to look. It never tells you that price will turn — only where a turn would make sense if it happens." },
+
+  { id:"lines", kicker:"Lesson 6", title:"Trendlines and channels",
+    blurb:"The simplest tool on the chart, and how to use it without fooling yourself.",
+    lede:"Two points and a ruler will tell you more about a market than most indicators, provided you're honest about which two points you picked.",
+    sections:[
+      { h:"Drawing one properly",
+        p:["In an uptrend, connect two rising lows and extend the line forward. In a downtrend, connect two falling highs. That line becomes a moving level where price has a history of reacting.",
+           "The more times price touches the line without breaking it, the more traders are watching it — and the more meaningful an eventual break becomes."] },
+      { h:"Channels",
+        p:["Draw a parallel line at the opposite extreme and you have a channel. Price that keeps working between the two gives you a rough map: near the lower rail in an uptrend is where entries live, near the upper rail is where they get risky.",
+           "When price escapes a channel that has held for a long time, that's usually worth more attention than a break of one that formed an hour ago."] },
+      { h:"The self-deception problem",
+        p:["Trendlines are easy to draw dishonestly. Slide the anchor points slightly, ignore an inconvenient wick, and any chart supports any story.",
+           "The fix is discipline: pick the two most obvious swing points, draw the line, and leave it. If you find yourself redrawing it to fit what you want to see, you've stopped analysing and started rationalising."] },
+    ],
+    key:"Draw the line before you have an opinion. A line you drew to justify a trade is decoration, not analysis." },
+
+  { id:"psychology", kicker:"Lesson 7", title:"The part that actually decides it",
+    blurb:"Why capable people lose money with good systems.",
+    lede:"Most traders don't fail because their analysis was wrong. They fail because of what they did after a loss.",
+    sections:[
+      { h:"Losses feel worse than wins feel good",
+        p:["Losing $100 hurts noticeably more than winning $100 pleases. That imbalance is well documented and it distorts behaviour: people take profits early to lock in a good feeling, and hold losers hoping to avoid a bad one.",
+           "In binaries there's no holding — the trade expires either way. So the distortion shows up somewhere else: in the trade you take immediately after a loss, to get it back."] },
+      { h:"Revenge trading",
+        p:["The pattern is always the same. A loss lands, the next entry is taken faster and larger than the plan allows, and the one after that faster still. An account that could survive twenty ordinary losses gets destroyed by four emotional ones.",
+           "The only reliable defence is a rule made in advance: after two losses in a row, stop for a fixed period. Not when you feel calm — that judgement is exactly what's compromised. A fixed count and a clock."] },
+      { h:"Streaks are normal, not signals",
+        p:["At 60% accuracy, a run of five straight losses somewhere in a hundred trades is the expected outcome. Not bad luck, not a broken system — the ordinary result.",
+           "Traders who haven't internalised this abandon working approaches during perfectly normal drawdowns, usually right before the distribution evens out. Knowing the number in advance is what lets you sit through it."] },
+      { h:"Process over outcome",
+        p:["A good trade taken correctly can lose. A reckless trade can win. Judging yourself by results on any single trade teaches the wrong lesson both ways — punishing good discipline and rewarding bad.",
+           "Grade the decision, not the outcome. Did you follow the plan, size correctly, and take a setup that met your criteria? That's what you control, and over enough trades it's what determines the balance."] },
+    ],
+    key:"Decide your stopping rule while you're calm, and write it down. In the moment you'll need it, you won't be able to make it." },
+];
+
+/* =======================================================================
    ROUTER
    ======================================================================= */
-const ROUTES = ["home","signals","risk","sessions","patterns","basics","sim","journal","bible","alerts"];
-const TOOLS  = ["risk","sessions"];
-const LEARN  = ["patterns","basics","sim"];
+const LESSON_IDS = LESSONS.map(l => l.id);
+const PAGES = ["home","signals","sessions-live","learn","lesson","patterns","sim",
+               "risk","clock","journal","bible","resources","alerts"];
+const LEARN_R = ["learn","patterns","sim",...LESSON_IDS];
+const TOOLS_R = ["risk","clock","journal"];
+
 const menu=$("menu"), scrim=$("scrim");
 const closeMenu=()=>{ menu.classList.remove("open"); scrim.classList.remove("open"); };
-
 $("burger").addEventListener("click",()=>{
   const o=menu.classList.toggle("open"); scrim.classList.toggle("open",o);
 });
@@ -784,66 +1054,128 @@ scrim.addEventListener("click",closeMenu);
 document.querySelectorAll(".nav__group>button").forEach(b=>
   b.addEventListener("click",()=>b.parentElement.classList.toggle("open")));
 
+let lessonIdx=0;
+
 function route(){
   let r=(location.hash.replace("#/","")||"home");
-  if(!ROUTES.includes(r)) r="home";
-  for(const id of ROUTES) $("p-"+id).classList.toggle("active", id===r);
-  document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("active", a.dataset.route===r));
-  $("meter").hidden = r!=="signals";
-  if(TOOLS.includes(r)) $("grpTools").classList.add("open");
-  if(LEARN.includes(r)) $("grpLearn").classList.add("open");
+  const isLesson = LESSON_IDS.includes(r);
+  if(!PAGES.includes(r) && !isLesson) r="home";
 
-  // Canvases must be laid out before they can be sized, so draw on arrival.
+  const shown = isLesson ? "lesson" : r;
+  for(const id of PAGES) $("p-"+id).classList.toggle("active", id===shown);
+  document.querySelectorAll(".nav a").forEach(a=>
+    a.classList.toggle("active", a.dataset.route===r));
+
+  $("meter").hidden = r!=="signals";
+  document.body.classList.toggle("reading", !["home","signals"].includes(shown));
+  if(LEARN_R.includes(r)) $("grpLearn").classList.add("open");
+  if(TOOLS_R.includes(r)) $("grpTools").classList.add("open");
+
+  if(isLesson){ lessonIdx=LESSON_IDS.indexOf(r); renderLesson(); }
+  // Canvases need layout before they can size themselves, so draw on arrival.
   if(r==="patterns") drawPattern();
   if(r==="sim") drawSim();
   if(r==="risk") calcRisk();
   if(r==="journal") paintJournal();
+  if(r==="clock") paintSessions();
+
+  document.querySelectorAll(".scroll").forEach(s=>s.scrollTop=0);
   closeMenu();
 }
 addEventListener("hashchange",route);
 
 /* =======================================================================
-   SHARED CANDLE RENDERER
+   LESSON RENDERING
    ======================================================================= */
-function fitCanvas(cv, hCss){
+$("topicList").innerHTML = LESSONS.map(l=>`
+  <a class="topic" href="#/${l.id}">
+    <span class="topic__n">${esc(l.kicker)}</span>
+    <h3>${esc(l.title)}</h3>
+    <p>${esc(l.blurb)}</p>
+  </a>`).join("");
+
+function renderLesson(){
+  const l=LESSONS[lessonIdx];
+  $("lKicker").textContent=l.kicker;
+  $("lTitle").textContent=l.title;
+  $("lLede").textContent=l.lede;
+  $("lBody").innerHTML =
+    l.sections.map(s=>`<div class="sec"><h3>${esc(s.h)}</h3>${s.p.map(p=>`<p>${p}</p>`).join("")}</div>`).join("")
+    + (l.key ? `<div class="keypoint"><p>${esc(l.key)}</p></div>` : "");
+  $("lPrev").textContent = lessonIdx>0 ? "← "+LESSONS[lessonIdx-1].kicker : "All lessons";
+  $("lNext").textContent = lessonIdx<LESSONS.length-1 ? LESSONS[lessonIdx+1].kicker+" →" : "Back to start";
+}
+$("lPrev").addEventListener("click",()=>{
+  location.hash = lessonIdx>0 ? "#/"+LESSON_IDS[lessonIdx-1] : "#/learn";
+});
+$("lNext").addEventListener("click",()=>{
+  location.hash = lessonIdx<LESSONS.length-1 ? "#/"+LESSON_IDS[lessonIdx+1] : "#/learn";
+});
+
+/* =======================================================================
+   ZOOM ROOMS
+   ======================================================================= */
+function wireRoom(cfg, btnIds, whenId, noteId){
+  for(const id of btnIds){
+    const b=$(id); if(!b) continue;
+    if(cfg.url){ b.href=cfg.url; b.classList.remove("off"); }
+    else { b.removeAttribute("href"); b.classList.add("off"); b.textContent="Link not set yet"; }
+  }
+  if(whenId&&$(whenId)) $(whenId).textContent=cfg.when;
+  if(noteId&&$(noteId)) $(noteId).textContent=cfg.note;
+}
+wireRoom(ZOOM.signals,["s1Btn"],"s1When","s1Note");
+wireRoom(ZOOM.class,  ["s2Btn"],"s2When","s2Note");
+wireRoom(ZOOM.bible,  ["s3Btn","s3Btn2"],"s3When","s3Note");
+
+/* =======================================================================
+   RESOURCES
+   ======================================================================= */
+$("resList").innerHTML = RESOURCES.map(g=>`
+  <div class="groupname">${esc(g.group)}</div>
+  ${g.items.map(i=>{
+    const ext = /^https?:/.test(i.u);
+    return `<a class="res" href="${esc(i.u)}"${ext?' target="_blank" rel="noopener"':''}>
+      <span class="res__i">${ext?"↗":"→"}</span>
+      <span class="res__b">
+        <span class="res__t">${esc(i.t)}</span>
+        <span class="res__d">${esc(i.d)}</span>
+        ${ext?`<span class="res__x">${esc(i.u.replace(/^https?:\/\//,""))}</span>`:""}
+      </span></a>`;
+  }).join("")}`).join("");
+
+/* =======================================================================
+   CANVAS HELPERS
+   ======================================================================= */
+function fitCanvas(cv,hCss){
   const dpr=Math.min(devicePixelRatio||1,2);
   const w=cv.clientWidth||cv.parentElement.clientWidth;
   cv.style.height=hCss+"px";
   cv.width=w*dpr; cv.height=hCss*dpr;
   const ctx=cv.getContext("2d");
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  return { ctx, w, h:hCss };
+  return { ctx,w,h:hCss };
 }
-
-function drawCandles(cv, candles, opts={}){
-  const { ctx,w,h } = fitCanvas(cv, opts.height||220);
+function drawCandles(cv,candles,opts={}){
+  const { ctx,w,h }=fitCanvas(cv,opts.height||230);
   ctx.clearRect(0,0,w,h);
   if(!candles.length) return;
-
   const pad=14;
-  const hi=Math.max(...candles.map(c=>c.h));
-  const lo=Math.min(...candles.map(c=>c.l));
+  const hi=Math.max(...candles.map(c=>c.h)), lo=Math.min(...candles.map(c=>c.l));
   const range=(hi-lo)||1;
-  const y=(v)=> pad + (hi-v)/range*(h-pad*2);
-  const slot=(w-pad*2)/candles.length;
-  const bw=Math.min(slot*0.62, 26);
-
+  const y=(v)=>pad+(hi-v)/range*(h-pad*2);
+  const slot=(w-pad*2)/candles.length, bw=Math.min(slot*0.62,26);
   candles.forEach((c,i)=>{
     const cx=pad+slot*i+slot/2;
-    const up=c.c>=c.o;
-    const col = up ? "#34E5A0" : "#FF3D6E";
-    ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1.5;
+    const col=c.c>=c.o?"#34E5A0":"#FF3D6E";
+    ctx.strokeStyle=col; ctx.fillStyle=col; ctx.lineWidth=1.6;
     ctx.beginPath(); ctx.moveTo(cx,y(c.h)); ctx.lineTo(cx,y(c.l)); ctx.stroke();
-    const top=y(Math.max(c.o,c.c));
-    const bh=Math.max(2, Math.abs(y(c.o)-y(c.c)));
-    ctx.fillRect(cx-bw/2, top, bw, bh);
+    ctx.fillRect(cx-bw/2, y(Math.max(c.o,c.c)), bw, Math.max(2,Math.abs(y(c.o)-y(c.c))));
   });
-
   if(opts.markLast){
     const cx=pad+slot*(candles.length-1)+slot/2;
     ctx.strokeStyle="rgba(201,59,232,.55)"; ctx.setLineDash([3,4]);
-    ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,h); ctx.stroke();
-    ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,h); ctx.stroke(); ctx.setLineDash([]);
   }
 }
 
@@ -854,15 +1186,12 @@ function calcRisk(){
   const bal=numv("kBal"), riskPct=numv("kRisk")/100;
   const pay=numv("kPay")/100, win=Math.min(0.999,Math.max(0.001,numv("kWin")/100));
   const stake=bal*riskPct;
-  const be = pay>0 ? 1/(1+pay) : 1;              // win rate that breaks even
-  const ev = win*stake*pay - (1-win)*stake;      // expected value per trade
-  const edge = win*pay - (1-win);                // per unit staked
-
-  // Kelly for a binary payout: what fraction of the bankroll maximises growth.
-  const kelly = pay>0 ? Math.max(0,(win*(1+pay)-1)/pay) : 0;
-
+  const be=pay>0?1/(1+pay):1;
+  const ev=win*stake*pay-(1-win)*stake;
+  const edge=win*pay-(1-win);
+  const kelly=pay>0?Math.max(0,(win*(1+pay)-1)/pay):0;
   const l=1-win;
-  const streak=Math.max(1, Math.round(Math.log(100*l)/Math.log(1/l)));
+  const streak=Math.max(1,Math.round(Math.log(100*l)/Math.log(1/l)));
   const dd=(1-Math.pow(1-riskPct,streak))*100;
 
   $("kStake").textContent=money(stake);
@@ -873,58 +1202,46 @@ function calcRisk(){
   $("kDD").textContent=dd.toFixed(1)+"%";
   $("kKelly").textContent=(kelly*100).toFixed(1)+"%";
 
-  // Compound the expected outcome forward, sizing off the running balance.
   let b=bal; const curve=[b];
-  for(let i=0;i<100;i++){ b += b*riskPct*edge; curve.push(b); }
+  for(let i=0;i<100;i++){ b+=b*riskPct*edge; curve.push(b); }
   $("kProj").textContent=money(b);
 
   const v=$("kVerdict");
   if(edge<=0){
     v.className="verdict bad";
     v.textContent=`No edge. At a ${(pay*100).toFixed(0)}% payout you need above ${(be*100).toFixed(1)}% accuracy, and ${(win*100).toFixed(0)}% is below that. Every trade loses money on average.`;
-  } else if(kelly < riskPct){
+  }else if(kelly<riskPct){
     v.className="verdict warn";
-    v.textContent=`Edge is real but you're oversized. Kelly caps this at ${(kelly*100).toFixed(1)}% per trade and you're risking ${(riskPct*100).toFixed(1)}%. Beyond the cap, more risk lowers long-run growth.`;
-  } else {
+    v.textContent=`Edge is real but you're oversized. Kelly caps this at ${(kelly*100).toFixed(1)}% per trade and you're risking ${(riskPct*100).toFixed(1)}%. Past the cap, more risk lowers long-run growth.`;
+  }else{
     v.className="verdict good";
     v.textContent=`Positive edge of ${(edge*100).toFixed(1)}% per unit staked, and your sizing sits inside the Kelly cap of ${(kelly*100).toFixed(1)}%.`;
   }
-
-  $("kNote").textContent =
-    `Expect a run of about ${streak} straight losses somewhere in 100 trades — that is the ordinary outcome, not the bad one. At ${(riskPct*100).toFixed(1)}% per trade it costs roughly ${dd.toFixed(1)}% of the account, so the question is whether you would keep following the plan through it.`;
-
+  $("kNote").textContent=`Expect a run of about ${streak} straight losses somewhere in 100 trades — the ordinary outcome, not the bad one. At ${(riskPct*100).toFixed(1)}% per trade that costs roughly ${dd.toFixed(1)}% of the account. The question is whether you'd keep following the plan through it.`;
   drawCurve(curve);
 }
 ["kBal","kRisk","kPay","kWin"].forEach(id=>$(id).addEventListener("input",calcRisk));
 
 function drawCurve(series){
-  const cv=$("kCurve"); const { ctx,w,h }=fitCanvas(cv,150);
+  const { ctx,w,h }=fitCanvas($("kCurve"),160);
   ctx.clearRect(0,0,w,h);
   const hi=Math.max(...series), lo=Math.min(...series), r=(hi-lo)||1, pad=10;
   const x=(i)=>pad+i/(series.length-1)*(w-pad*2);
   const y=(v)=>pad+(hi-v)/r*(h-pad*2);
-  const rising=series[series.length-1]>=series[0];
-  const col=rising?"#34E5A0":"#FF3D6E";
-
-  const g=ctx.createLinearGradient(0,0,0,h);
-  g.addColorStop(0, col.replace(")",",.28)").replace("#","rgba(").length? col+"47":col);
+  const col=series[series.length-1]>=series[0]?"#34E5A0":"#FF3D6E";
   ctx.beginPath(); ctx.moveTo(x(0),y(series[0]));
   series.forEach((v,i)=>ctx.lineTo(x(i),y(v)));
   ctx.lineTo(x(series.length-1),h); ctx.lineTo(x(0),h); ctx.closePath();
   ctx.fillStyle=col+"22"; ctx.fill();
-
   ctx.beginPath(); ctx.moveTo(x(0),y(series[0]));
   series.forEach((v,i)=>ctx.lineTo(x(i),y(v)));
   ctx.strokeStyle=col; ctx.lineWidth=2; ctx.stroke();
 }
 
 /* =======================================================================
-   SESSIONS
+   SESSION CLOCK
    ======================================================================= */
-const SESSIONS=[
-  {n:"Sydney",o:21,c:6},{n:"Tokyo",o:0,c:9},
-  {n:"London",o:7,c:16},{n:"New York",o:12,c:21},
-];
+const SESSIONS=[{n:"Sydney",o:21,c:6},{n:"Tokyo",o:0,c:9},{n:"London",o:7,c:16},{n:"New York",o:12,c:21}];
 function paintSessions(){
   const d=new Date(), h=d.getUTCHours()+d.getUTCMinutes()/60;
   const open=(s)=> s.o<s.c ? (h>=s.o&&h<s.c) : (h>=s.o||h<s.c);
@@ -946,179 +1263,140 @@ setInterval(paintSessions,15000);
    ======================================================================= */
 const C=(o,h,l,c)=>({o,h,l,c});
 const PATTERNS=[
-  { name:"Bullish engulfing", kind:"Reversal · bullish",
+  { name:"Bullish engulfing", kind:"Reversal · bullish", rel:70,
     candles:[C(52,53,46,47),C(46,58,45,57),C(57,60,55,59)],
     what:"A down candle followed by an up candle whose body swallows it whole.",
     mean:"Sellers controlled one candle and buyers took all of it back plus more. The bigger the engulfing body relative to recent ones, the more it matters.",
-    fail:"Inside a downtrend it's often just a pullback. It carries weight at the end of an extended move down, not in the middle of one." },
-  { name:"Bearish engulfing", kind:"Reversal · bearish",
+    why:"Strong when the engulfing body is large and it lands at a level that already mattered.",
+    fail:"Inside a downtrend it's often just a pullback. It carries weight at the end of an extended move down, not the middle of one." },
+  { name:"Bearish engulfing", kind:"Reversal · bearish", rel:70,
     candles:[C(46,54,45,53),C(54,55,42,43),C(43,45,40,41)],
     what:"An up candle followed by a down candle whose body covers it entirely.",
     mean:"Buyers pushed, then lost the whole move within one candle. Strongest after a run up into an obvious level.",
-    fail:"In a strong uptrend this often marks a pause, not a top. Without a level overhead, it is noise." },
-  { name:"Hammer", kind:"Reversal · bullish",
+    why:"Same logic inverted. Needs something overhead for the rejection to mean anything.",
+    fail:"In a strong uptrend this often marks a pause, not a top. Without a level above, it's noise." },
+  { name:"Hammer", kind:"Reversal · bullish", rel:60,
     candles:[C(56,57,50,51),C(50,52,41,50),C(50,55,49,54)],
     what:"A small body at the top with a lower wick at least twice the body.",
     mean:"Price was pushed well down and rejected hard before the close. The long wick is the whole signal.",
+    why:"Depends almost entirely on what it is rejecting. In open space it's close to noise.",
     fail:"A hammer in mid-air means little. It needs to be rejecting something — a prior low, a round number, a level that already mattered." },
-  { name:"Shooting star", kind:"Reversal · bearish",
+  { name:"Shooting star", kind:"Reversal · bearish", rel:60,
     candles:[C(44,50,43,49),C(50,60,49,51),C(51,52,45,46)],
     what:"A small body at the bottom with an upper wick at least twice the body.",
     mean:"Buyers ran it up and were rejected before the close. The mirror of a hammer.",
+    why:"Reliable at extremes, unreliable in a range where every push gets sold.",
     fail:"Common in choppy ranges where every push gets rejected. It only means something at an extreme." },
-  { name:"Doji", kind:"Indecision",
+  { name:"Doji", kind:"Indecision", rel:35,
     candles:[C(46,52,44,51),C(51,55,47,51),C(51,53,45,46)],
     what:"Open and close land in nearly the same place.",
     mean:"Neither side won the candle. After a long run, that stall is information: the pressure has stopped.",
+    why:"On its own it says only that the candle was undecided. Context carries it.",
     fail:"In quiet conditions doji appear constantly and mean nothing. Only read one that ends a strong move." },
-  { name:"Morning star", kind:"Reversal · bullish",
+  { name:"Morning star", kind:"Reversal · bullish", rel:75,
     candles:[C(58,59,48,49),C(47,49,45,47),C(48,58,47,57)],
     what:"A strong down candle, a small indecisive one, then a strong up candle.",
     mean:"Selling exhausts, the market pauses, buyers take over. Three candles telling one story.",
+    why:"Three candles telling one story is harder to fake than one candle.",
     fail:"If the third candle doesn't recover most of the first, the pattern hasn't completed — it's just a pause." },
-  { name:"Three white soldiers", kind:"Continuation · bullish",
+  { name:"Three white soldiers", kind:"Continuation · bullish", rel:55,
     candles:[C(42,48,41,47),C(47,53,46,52),C(52,58,51,57)],
     what:"Three up candles in a row, each closing near its high and opening inside the last body.",
     mean:"Steady accumulation rather than one spike. Trend strength, not a reversal.",
+    why:"Real trend strength, but often appears near the end of a run rather than the start.",
     fail:"After a long run this is often where the move ends, not where it starts. Late entries into soldiers get caught." },
-  { name:"Inside bar", kind:"Compression",
+  { name:"Inside bar", kind:"Compression", rel:45,
     candles:[C(44,58,42,56),C(50,54,47,52),C(52,53,50,52)],
     what:"A candle whose entire range sits inside the previous candle's range.",
     mean:"Volatility contracting. The market is coiling, and the break of the outside candle's range usually sets direction.",
+    why:"Says compression, not direction. Guessing the break is a coin flip.",
     fail:"Direction is unknown until the break. Guessing the way out of an inside bar is a coin flip." },
 ];
-const REL={
-  "Bullish engulfing":[70,"Strong when the engulfing body is large and it lands at a level that already mattered."],
-  "Bearish engulfing":[70,"Same logic inverted. Needs something overhead for the rejection to mean anything."],
-  "Hammer":[60,"Depends almost entirely on what it is rejecting. In open space it is close to noise."],
-  "Shooting star":[60,"Reliable at extremes, unreliable in a range where every push gets sold."],
-  "Doji":[35,"On its own it says only that the candle was undecided. Context carries it."],
-  "Morning star":[75,"Three candles telling one story is harder to fake than one candle."],
-  "Three white soldiers":[55,"Real trend strength, but often appears near the end of a run rather than the start."],
-  "Inside bar":[45,"Says compression, not direction. Guessing the break is a coin flip."],
-};
 let patIdx=0;
 function drawPattern(){
   const p=PATTERNS[patIdx];
-  const [score,why]=REL[p.name]||[50,""];
-  $("patRelFill").style.width=score+"%";
-  $("patRelFill").style.background = score>=65?"var(--rise)":score>=45?"#FFC24B":"var(--fall)";
-  $("patRelN").textContent=score>=65?"High":score>=45?"Moderate":"Low";
-  $("patRelWhy").textContent=why;
-  drawCandles($("patCanvas"), p.candles, { height:220 });
+  drawCandles($("patCanvas"),p.candles,{height:230});
   $("patKind").textContent=p.kind;
   $("patName").textContent=p.name;
   $("patWhat").textContent=p.what;
   $("patMean").textContent=p.mean;
   $("patFail").textContent=p.fail;
+  $("patRelFill").style.width=p.rel+"%";
+  $("patRelFill").style.background=p.rel>=65?"var(--rise)":p.rel>=45?"var(--warn)":"var(--fall)";
+  $("patRelN").textContent=p.rel>=65?"High":p.rel>=45?"Moderate":"Low";
+  $("patRelWhy").textContent=p.why;
   $("patCount").textContent=`${patIdx+1} of ${PATTERNS.length}`;
 }
 $("patNext").addEventListener("click",()=>{ patIdx=(patIdx+1)%PATTERNS.length; drawPattern(); });
 $("patPrev").addEventListener("click",()=>{ patIdx=(patIdx-1+PATTERNS.length)%PATTERNS.length; drawPattern(); });
 
 /* =======================================================================
-   LESSONS
-   ======================================================================= */
-const LESSONS=[
-  { t:"The payout decides everything", b:"At an 80% payout you need better than 55.6% accuracy to break even. At 70% you need 58.8%. Before any strategy question, know the number you have to beat — most people are trading a system that was never above it." },
-  { t:"Size before direction", b:"Direction is the part you can't control. Size is the part you can. Two percent of the account per trade means a run of ten losses costs about eighteen percent; ten percent per trade means the same run costs sixty-five. Same calls, different outcome." },
-  { t:"Losing streaks are normal", b:"At 60% accuracy, a run of five straight losses inside a hundred trades is the expected outcome, not bad luck. Plan for it in advance and it changes nothing. Discover it mid-drawdown and it usually ends the plan." },
-  { t:"A level, then a signal", b:"A pattern in open space is noise. The same pattern rejecting a prior high, a round number, or an old reaction point is a signal. The level does the work; the candle only confirms it." },
-  { t:"Time of day is an edge", b:"Session overlaps carry the heaviest flow and the cleanest moves. The dead hours between sessions produce the chop that stops people out. Trading fewer hours often raises accuracy more than any indicator." },
-  { t:"Write it down or repeat it", b:"Without a record you'll remember the wins and forget the pattern behind the losses. A journal turns a run of trades into information you can act on. That's what the journal page is for." },
-];
-$("lessons").innerHTML=LESSONS.map((l,i)=>`
-  <div class="card"><div class="card__k">Lesson ${i+1}</div>
-  <div class="card__v" style="font-size:18px">${l.t}</div>
-  <div class="card__note">${l.b}</div></div>`).join("");
-
-/* =======================================================================
    SIMULATOR
    ======================================================================= */
 const SIM_KEY="star.sim";
-let sim={ bal:1000, wins:0, losses:0, streak:0, best:0, candles:[], equity:[1000] };
-
+let sim={ bal:1000,wins:0,losses:0,streak:0,best:0,candles:[],equity:[1000] };
 function loadSim(){
   try{ const r=localStorage.getItem(SIM_KEY); if(r) sim={...sim,...JSON.parse(r)}; }catch{}
-  if(!sim.candles || sim.candles.length<12) sim.candles=genCandles(18);
+  if(!sim.candles||sim.candles.length<12) sim.candles=genCandles(18);
   if(!Array.isArray(sim.equity)||!sim.equity.length) sim.equity=[sim.bal];
 }
-const saveSim=()=>{ try{ localStorage.setItem(SIM_KEY, JSON.stringify(sim)); }catch{} };
+const saveSim=()=>{ try{ localStorage.setItem(SIM_KEY,JSON.stringify(sim)); }catch{} };
 
-function genCandles(n, from){
-  const out=[]; let price = from ?? 100;
-  // A drifting random walk with occasional momentum, so the series has runs
-  // to read rather than pure noise.
+function genCandles(n,from){
+  const out=[]; let price=from??100;
   let drift=(Math.random()-0.5)*0.4;
   for(let i=0;i<n;i++){
     if(Math.random()<0.18) drift=(Math.random()-0.5)*0.9;
-    const o=price;
-    const move=drift + (Math.random()-0.5)*1.6;
-    const c=o+move;
-    const h=Math.max(o,c)+Math.random()*0.8;
-    const l=Math.min(o,c)-Math.random()*0.8;
-    out.push({o:+o.toFixed(2),h:+h.toFixed(2),l:+l.toFixed(2),c:+c.toFixed(2)});
+    const o=price, move=drift+(Math.random()-0.5)*1.6, c=o+move;
+    out.push({o:+o.toFixed(2),h:+(Math.max(o,c)+Math.random()*0.8).toFixed(2),
+      l:+(Math.min(o,c)-Math.random()*0.8).toFixed(2),c:+c.toFixed(2)});
     price=c;
   }
   return out;
 }
-
 function drawSim(){
-  drawCandles($("simCanvas"), sim.candles.slice(-16), { height:220, markLast:true });
-  const n=sim.wins+sim.losses;
-  const wr = n ? sim.wins/n : 0;
+  drawCandles($("simCanvas"),sim.candles.slice(-16),{height:230,markLast:true});
+  const n=sim.wins+sim.losses, wr=n?sim.wins/n:0;
   $("simBal").textContent=money(sim.bal);
-  $("simWR").textContent = n ? Math.round(wr*100)+"%" : "—";
+  $("simWR").textContent=n?Math.round(wr*100)+"%":"—";
   $("simRec").textContent=`${sim.wins}–${sim.losses}`;
-  $("simStreak").textContent = sim.streak>0 ? `${sim.streak} W` : sim.streak<0 ? `${-sim.streak} L` : "—";
-  $("simBest").textContent = sim.best>0 ? `${sim.best} W` : "—";
-
-  // 80% payout needs 55.6% accuracy to break even — the number that matters.
-  const be=100/1.8;
-  const d=n ? wr*100-be : 0;
-  $("simEdge").textContent = n ? (d>=0?"+":"")+d.toFixed(1)+"%" : "—";
-  $("simEdge").style.color = !n ? "var(--text)" : d>=0 ? "var(--rise)" : "var(--fall)";
-
+  $("simStreak").textContent=sim.streak>0?`${sim.streak} W`:sim.streak<0?`${-sim.streak} L`:"—";
+  $("simBest").textContent=sim.best>0?`${sim.best} W`:"—";
+  const be=100/1.8, d=n?wr*100-be:0;
+  $("simEdge").textContent=n?(d>=0?"+":"")+d.toFixed(1)+"%":"—";
+  $("simEdge").style.color=!n?"var(--text)":d>=0?"var(--rise)":"var(--fall)";
   drawSpark();
 }
-
 function drawSpark(){
-  const cv=$("simSpark"); const { ctx,w,h }=fitCanvas(cv,54);
+  const { ctx,w,h }=fitCanvas($("simSpark"),58);
   ctx.clearRect(0,0,w,h);
   const s=sim.equity;
-  if(s.length<2){ ctx.fillStyle="#6D7A96"; ctx.font="10px IBM Plex Mono, monospace";
-    ctx.textAlign="center"; ctx.fillText("Your equity curve builds as you call candles", w/2, h/2+3); return; }
+  if(s.length<2){
+    ctx.fillStyle="#8592AE"; ctx.font="11px IBM Plex Mono, monospace"; ctx.textAlign="center";
+    ctx.fillText("Your equity curve builds as you call candles", w/2, h/2+4); return;
+  }
   const hi=Math.max(...s), lo=Math.min(...s), r=(hi-lo)||1, pad=6;
-  const x=(i)=>pad+i/(s.length-1)*(w-pad*2);
-  const y=(v)=>pad+(hi-v)/r*(h-pad*2);
-  const up=s[s.length-1]>=s[0];
+  const x=(i)=>pad+i/(s.length-1)*(w-pad*2), y=(v)=>pad+(hi-v)/r*(h-pad*2);
   ctx.beginPath(); ctx.moveTo(x(0),y(s[0]));
   s.forEach((v,i)=>ctx.lineTo(x(i),y(v)));
-  ctx.strokeStyle=up?"#34E5A0":"#FF3D6E"; ctx.lineWidth=1.8; ctx.stroke();
+  ctx.strokeStyle=s[s.length-1]>=s[0]?"#34E5A0":"#FF3D6E"; ctx.lineWidth=1.8; ctx.stroke();
 }
-
 function callIt(dir){
   const last=sim.candles[sim.candles.length-1];
-  const next=genCandles(1, last.c)[0];
+  const next=genCandles(1,last.c)[0];
   sim.candles.push(next);
   if(sim.candles.length>60) sim.candles=sim.candles.slice(-60);
-
-  const wentUp=next.c>=next.o;
-  const won=(dir==="BUY")===wentUp;
-  const stake=sim.bal*0.02;
-
+  const wentUp=next.c>=next.o, won=(dir==="BUY")===wentUp, stake=sim.bal*0.02;
   if(won){ sim.bal+=stake*0.8; sim.wins++; sim.streak=sim.streak>=0?sim.streak+1:1; }
   else   { sim.bal-=stake;     sim.losses++; sim.streak=sim.streak<=0?sim.streak-1:-1; }
   if(sim.streak>sim.best) sim.best=sim.streak;
   sim.equity.push(sim.bal);
   if(sim.equity.length>120) sim.equity=sim.equity.slice(-120);
-
-  const msg=$("simMsg");
-  msg.className="simmsg "+(won?"good":"bad");
-  msg.textContent = won
+  const m=$("simMsg");
+  m.className="simmsg "+(won?"good":"bad");
+  m.textContent = won
     ? `Right — it closed ${wentUp?"up":"down"}. ${money(stake*0.8)} at an 80% payout.`
     : `Wrong — it closed ${wentUp?"up":"down"}. ${money(stake)} gone; a loss costs the full stake.`;
-
   saveSim(); drawSim();
 }
 $("simUp").addEventListener("click",()=>callIt("BUY"));
@@ -1130,32 +1408,23 @@ $("simReset").addEventListener("click",()=>{
 });
 
 /* =======================================================================
-   TRADE JOURNAL — device-local JSON, nothing uploaded
+   TRADE JOURNAL
    ======================================================================= */
 const J_KEY="star.journal";
-let trades=[];
-let weekOffset=0;
-let jDir="BUY", jRes="win";
-
+let trades=[], weekOffset=0, jDir="BUY", jRes="win";
 function loadJournal(){
-  try{ trades=JSON.parse(localStorage.getItem(J_KEY)||"[]"); }
-  catch{ trades=[]; }
+  try{ trades=JSON.parse(localStorage.getItem(J_KEY)||"[]"); }catch{ trades=[]; }
   if(!Array.isArray(trades)) trades=[];
 }
-const saveJournal=()=>{ try{ localStorage.setItem(J_KEY, JSON.stringify(trades)); }catch{} };
-
-// Monday-start week containing today, shifted by weekOffset.
+const saveJournal=()=>{ try{ localStorage.setItem(J_KEY,JSON.stringify(trades)); }catch{} };
 function weekRange(offset){
   const d=new Date(); d.setHours(0,0,0,0);
-  const dow=(d.getDay()+6)%7;                 // Mon = 0
-  d.setDate(d.getDate()-dow+offset*7);
+  d.setDate(d.getDate()-((d.getDay()+6)%7)+offset*7);
   const end=new Date(d); end.setDate(d.getDate()+6);
   return { start:d, end };
 }
 const iso=(d)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-
-const pnl=(t)=> t.result==="win" ? t.stake*t.payout/100
-              : t.result==="loss" ? -t.stake : 0;
+const pnl=(t)=> t.result==="win" ? t.stake*t.payout/100 : t.result==="loss" ? -t.stake : 0;
 
 document.querySelectorAll("#jDir button").forEach(b=>b.addEventListener("click",()=>{
   jDir=b.dataset.v;
@@ -1165,33 +1434,25 @@ document.querySelectorAll("#jRes button").forEach(b=>b.addEventListener("click",
   jRes=b.dataset.v;
   document.querySelectorAll("#jRes button").forEach(x=>x.classList.toggle("on",x===b));
 }));
-
 $("jAdd").addEventListener("click",()=>{
-  const date=$("jDate").value || iso(new Date());
   const stake=parseFloat($("jStake").value)||0;
   if(stake<=0){ $("jStake").focus(); return; }
   trades.push({
     id:Date.now()+"-"+Math.random().toString(36).slice(2,7),
-    date, pair:($("jPair").value||"").trim()||"—",
+    date:$("jDate").value||iso(new Date()),
+    pair:($("jPair").value||"").trim()||"—",
     dir:jDir, stake, payout:parseFloat($("jPay").value)||0,
     result:jRes, note:($("jNote").value||"").trim(),
   });
-  saveJournal();
-  $("jNote").value="";
-  paintJournal();
+  saveJournal(); $("jNote").value=""; paintJournal();
 });
-
 $("wkPrev").addEventListener("click",()=>{ weekOffset--; paintJournal(); });
 $("wkNext").addEventListener("click",()=>{ weekOffset++; paintJournal(); });
-
 $("jExport").addEventListener("click",()=>{
-  const blob=new Blob([JSON.stringify(trades,null,2)],{type:"application/json"});
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="star-journal.json";
-  a.click(); URL.revokeObjectURL(a.href);
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(trades,null,2)],{type:"application/json"}));
+  a.download="star-journal.json"; a.click(); URL.revokeObjectURL(a.href);
 });
-
 $("jWipe").addEventListener("click",()=>{
   if(!confirm("Erase every logged trade on this device? This cannot be undone.")) return;
   trades=[]; saveJournal(); paintJournal();
@@ -1201,129 +1462,148 @@ function paintJournal(){
   const { start,end }=weekRange(weekOffset);
   const s=iso(start), e=iso(end);
   const wk=trades.filter(t=>t.date>=s&&t.date<=e).sort((a,b)=>a.date<b.date?1:-1);
-
   const fmt=(d)=>d.toLocaleDateString(undefined,{month:"short",day:"numeric"});
   $("wkLabel").textContent = weekOffset===0 ? `This week · ${fmt(start)}–${fmt(end)}` : `${fmt(start)}–${fmt(end)}`;
 
   const settled=wk.filter(t=>t.result!=="draw");
   const wins=settled.filter(t=>t.result==="win").length;
   const net=wk.reduce((a,t)=>a+pnl(t),0);
-
   $("jN").textContent=wk.length;
-  $("jWR").textContent = settled.length ? Math.round(wins/settled.length*100)+"%" : "—";
+  $("jWR").textContent=settled.length?Math.round(wins/settled.length*100)+"%":"—";
   $("jNet").textContent=money(net);
-  $("jNet").style.color = net>0?"var(--rise)":net<0?"var(--fall)":"var(--text)";
+  $("jNet").style.color=net>0?"var(--rise)":net<0?"var(--fall)":"var(--text)";
 
-  // Per-day totals across Mon–Sun
   const days=[...Array(7)].map((_,i)=>{
     const d=new Date(start); d.setDate(start.getDate()+i);
-    const key=iso(d);
-    const dayTrades=wk.filter(t=>t.date===key);
-    return { key, label:d.toLocaleDateString(undefined,{weekday:"short"})[0],
-             net:dayTrades.reduce((a,t)=>a+pnl(t),0), n:dayTrades.length };
+    const key=iso(d), dt=wk.filter(t=>t.date===key);
+    return { label:d.toLocaleDateString(undefined,{weekday:"short"})[0],
+             net:dt.reduce((a,t)=>a+pnl(t),0), n:dt.length };
   });
   const best=days.reduce((a,b)=>b.net>a.net?b:a,days[0]);
-  $("jBest").textContent = best && best.n ? money(best.net) : "—";
-
+  $("jBest").textContent=best&&best.n?money(best.net):"—";
   drawWeek(days);
 
   $("jList").innerHTML = wk.length ? wk.map(t=>`
     <div class="trade ${t.result}">
       <div class="trade__top">
         <span class="trade__dir ${t.dir==="BUY"?"up":"down"}">${t.dir}</span>
-        <span class="trade__pair">${t.pair}</span>
+        <span class="trade__pair">${esc(t.pair)}</span>
         <span class="trade__pnl">${money(pnl(t))}</span>
       </div>
-      <div class="trade__sub">
-        ${t.date} · ${money(t.stake)} at ${t.payout}% · ${t.result}
-        ${t.note?` · ${t.note.replace(/</g,"&lt;")}`:""}
-      </div>
+      <div class="trade__sub">${t.date} · ${money(t.stake)} at ${t.payout}% · ${t.result}${t.note?" · "+esc(t.note):""}</div>
       <button class="trade__x" data-del="${t.id}" aria-label="Delete">×</button>
     </div>`).join("")
-    : `<p class="hint" style="margin:18px 0">No trades logged this week.</p>`;
+    : `<p class="hint" style="margin:20px 0">No trades logged this week.</p>`;
 
-  $("jList").querySelectorAll("[data-del]").forEach(b=>
-    b.addEventListener("click",()=>{
-      trades=trades.filter(t=>t.id!==b.dataset.del);
-      saveJournal(); paintJournal();
-    }));
-
+  $("jList").querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{
+    trades=trades.filter(t=>t.id!==b.dataset.del); saveJournal(); paintJournal();
+  }));
   paintHomeWeek();
 }
-
 function drawWeek(days){
-  const cv=$("jChart"); const { ctx,w,h }=fitCanvas(cv,120);
+  const { ctx,w,h }=fitCanvas($("jChart"),130);
   ctx.clearRect(0,0,w,h);
   const max=Math.max(1,...days.map(d=>Math.abs(d.net)));
   const pad=12, slot=(w-pad*2)/7, mid=h/2;
   ctx.strokeStyle="rgba(255,255,255,.10)";
   ctx.beginPath(); ctx.moveTo(pad,mid); ctx.lineTo(w-pad,mid); ctx.stroke();
-
   days.forEach((d,i)=>{
     const cx=pad+slot*i+slot/2, bw=Math.min(slot*0.5,26);
-    const bh=Math.abs(d.net)/max*(h/2-16);
-    ctx.fillStyle = d.net>0?"#34E5A0" : d.net<0?"#FF3D6E" : "rgba(255,255,255,.14)";
-    if(d.net>=0) ctx.fillRect(cx-bw/2, mid-bh, bw, Math.max(bh,2));
-    else ctx.fillRect(cx-bw/2, mid, bw, Math.max(bh,2));
-    ctx.fillStyle="#6D7A96"; ctx.font="10px IBM Plex Mono, monospace";
-    ctx.textAlign="center"; ctx.fillText(d.label, cx, h-2);
+    const bh=Math.abs(d.net)/max*(h/2-18);
+    ctx.fillStyle=d.net>0?"#34E5A0":d.net<0?"#FF3D6E":"rgba(255,255,255,.14)";
+    if(d.net>=0) ctx.fillRect(cx-bw/2,mid-bh,bw,Math.max(bh,2));
+    else ctx.fillRect(cx-bw/2,mid,bw,Math.max(bh,2));
+    ctx.fillStyle="#8592AE"; ctx.font="11px IBM Plex Mono, monospace";
+    ctx.textAlign="center"; ctx.fillText(d.label,cx,h-3);
   });
 }
-
 function paintHomeWeek(){
   const { start,end }=weekRange(0);
   const wk=trades.filter(t=>t.date>=iso(start)&&t.date<=iso(end));
   const net=wk.reduce((a,t)=>a+pnl(t),0);
-  $("hWeek").textContent = wk.length ? money(net) : "—";
-  $("hWeek").style.color = net>0?"var(--rise)":net<0?"var(--fall)":"var(--text)";
-  $("hWeekN").textContent = wk.length ? `${wk.length} trade${wk.length>1?"s":""} logged.` : "No trades logged.";
+  $("hWeek").textContent=wk.length?money(net):"—";
+  $("hWeek").style.color=net>0?"var(--rise)":net<0?"var(--fall)":"var(--text)";
+  $("hWeekN").textContent=wk.length?`${wk.length} trade${wk.length>1?"s":""} logged.`:"No trades logged.";
 }
 
 /* =======================================================================
-   MINI BIBLE — King James Version, public domain, bundled in this file
+   MINI BIBLE — King James Version, public domain
    ======================================================================= */
 const VERSES=[
-  {t:"strength",v:"I can do all things through Christ which strengtheneth me.",r:"Philippians 4:13"},
-  {t:"strength",v:"The LORD is my strength and my shield; my heart trusted in him, and I am helped.",r:"Psalm 28:7"},
-  {t:"strength",v:"Be strong and of a good courage; be not afraid, neither be thou dismayed.",r:"Joshua 1:9"},
-  {t:"strength",v:"They that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles.",r:"Isaiah 40:31"},
-  {t:"strength",v:"God is our refuge and strength, a very present help in trouble.",r:"Psalm 46:1"},
-  {t:"strength",v:"The joy of the LORD is your strength.",r:"Nehemiah 8:10"},
+  {t:"strength",v:"I can do all things through Christ which strengtheneth me.",r:"Philippians 4:13",
+   d:"Strength here is given, not summoned. On the days you have none of your own, that distinction is the whole comfort."},
+  {t:"strength",v:"The LORD is my strength and my shield; my heart trusted in him, and I am helped.",r:"Psalm 28:7",
+   d:"A shield is for what you cannot see coming. Much of what you fear will simply never arrive."},
+  {t:"strength",v:"Be strong and of a good courage; be not afraid, neither be thou dismayed.",r:"Joshua 1:9",
+   d:"Courage is commanded, which means it is a decision before it is a feeling."},
+  {t:"strength",v:"They that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles.",r:"Isaiah 40:31",
+   d:"Renewal follows waiting. The pause you resent may be the part doing the work."},
+  {t:"strength",v:"God is our refuge and strength, a very present help in trouble.",r:"Psalm 46:1",
+   d:"Present, not distant. Help that arrives late is a different kind of help than this."},
+  {t:"strength",v:"The joy of the LORD is your strength.",r:"Nehemiah 8:10",
+   d:"Joy as a source rather than a reward reorders how you spend a hard day."},
 
-  {t:"patience",v:"Rest in the LORD, and wait patiently for him.",r:"Psalm 37:7"},
-  {t:"patience",v:"Let us not be weary in well doing: for in due season we shall reap, if we faint not.",r:"Galatians 6:9"},
-  {t:"patience",v:"But let patience have her perfect work, that ye may be perfect and entire, wanting nothing.",r:"James 1:4"},
-  {t:"patience",v:"To every thing there is a season, and a time to every purpose under the heaven.",r:"Ecclesiastes 3:1"},
-  {t:"patience",v:"I waited patiently for the LORD; and he inclined unto me, and heard my cry.",r:"Psalm 40:1"},
+  {t:"patience",v:"Rest in the LORD, and wait patiently for him.",r:"Psalm 37:7",
+   d:"Rest and wait are the same instruction. Anxious waiting is not what's being asked."},
+  {t:"patience",v:"Let us not be weary in well doing: for in due season we shall reap, if we faint not.",r:"Galatians 6:9",
+   d:"Due season, not immediate season. The gap between sowing and reaping is where most people quit."},
+  {t:"patience",v:"But let patience have her perfect work, that ye may be perfect and entire, wanting nothing.",r:"James 1:4",
+   d:"Patience is described as doing work, not passing time."},
+  {t:"patience",v:"To every thing there is a season, and a time to every purpose under the heaven.",r:"Ecclesiastes 3:1",
+   d:"Some seasons are for building and some for waiting. Confusing which one you're in causes most of the strain."},
+  {t:"patience",v:"I waited patiently for the LORD; and he inclined unto me, and heard my cry.",r:"Psalm 40:1",
+   d:"The waiting came first in the sentence, and it came first in the experience too."},
 
-  {t:"discipline",v:"He that is slow to anger is better than the mighty; and he that ruleth his spirit than he that taketh a city.",r:"Proverbs 16:32"},
-  {t:"discipline",v:"Wealth gotten by vanity shall be diminished: but he that gathereth by labour shall increase.",r:"Proverbs 13:11"},
-  {t:"discipline",v:"The thoughts of the diligent tend only to plenteousness; but of every one that is hasty only to want.",r:"Proverbs 21:5"},
-  {t:"discipline",v:"For God hath not given us the spirit of fear; but of power, and of love, and of a sound mind.",r:"2 Timothy 1:7"},
-  {t:"discipline",v:"Whatsoever ye do, do it heartily, as to the Lord, and not unto men.",r:"Colossians 3:23"},
-  {t:"discipline",v:"He that is faithful in that which is least is faithful also in much.",r:"Luke 16:10"},
+  {t:"discipline",v:"He that is slow to anger is better than the mighty; and he that ruleth his spirit than he that taketh a city.",r:"Proverbs 16:32",
+   d:"Self-command is ranked above conquest. The harder territory is internal."},
+  {t:"discipline",v:"Wealth gotten by vanity shall be diminished: but he that gathereth by labour shall increase.",r:"Proverbs 13:11",
+   d:"Money that arrives quickly tends to leave quickly. Accumulation has a pace."},
+  {t:"discipline",v:"The thoughts of the diligent tend only to plenteousness; but of every one that is hasty only to want.",r:"Proverbs 21:5",
+   d:"Haste is named as the opposite of diligence — not laziness. Rushing is its own failure mode."},
+  {t:"discipline",v:"For God hath not given us the spirit of fear; but of power, and of love, and of a sound mind.",r:"2 Timothy 1:7",
+   d:"A sound mind is listed as a gift. Clear thinking under pressure is worth asking for."},
+  {t:"discipline",v:"Whatsoever ye do, do it heartily, as to the Lord, and not unto men.",r:"Colossians 3:23",
+   d:"Changes the audience for your work, which changes the standard."},
+  {t:"discipline",v:"He that is faithful in that which is least is faithful also in much.",r:"Luke 16:10",
+   d:"Small amounts test the same character that large amounts will."},
 
-  {t:"peace",v:"Peace I leave with you, my peace I give unto you: let not your heart be troubled.",r:"John 14:27"},
-  {t:"peace",v:"Thou wilt keep him in perfect peace, whose mind is stayed on thee.",r:"Isaiah 26:3"},
-  {t:"peace",v:"Casting all your care upon him; for he careth for you.",r:"1 Peter 5:7"},
-  {t:"peace",v:"Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God.",r:"Philippians 4:6"},
-  {t:"peace",v:"Come unto me, all ye that labour and are heavy laden, and I will give you rest.",r:"Matthew 11:28"},
+  {t:"peace",v:"Peace I leave with you, my peace I give unto you: let not your heart be troubled.",r:"John 14:27",
+   d:"Peace given rather than achieved. You are not required to manufacture it."},
+  {t:"peace",v:"Thou wilt keep him in perfect peace, whose mind is stayed on thee.",r:"Isaiah 26:3",
+   d:"Where the mind rests decides what the day feels like."},
+  {t:"peace",v:"Casting all your care upon him; for he careth for you.",r:"1 Peter 5:7",
+   d:"Casting is deliberate. Worry does not leave on its own; it has to be handed over."},
+  {t:"peace",v:"Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God.",r:"Philippians 4:6",
+   d:"Thanksgiving is included in the instruction, before the answer arrives."},
+  {t:"peace",v:"Come unto me, all ye that labour and are heavy laden, and I will give you rest.",r:"Matthew 11:28",
+   d:"The invitation is addressed specifically to the tired. You qualify by being worn out."},
 
-  {t:"provision",v:"But my God shall supply all your need according to his riches in glory by Christ Jesus.",r:"Philippians 4:19"},
-  {t:"provision",v:"The LORD is my shepherd; I shall not want.",r:"Psalm 23:1"},
-  {t:"provision",v:"Seek ye first the kingdom of God, and his righteousness; and all these things shall be added unto you.",r:"Matthew 6:33"},
-  {t:"provision",v:"Every good gift and every perfect gift is from above.",r:"James 1:17"},
-  {t:"provision",v:"Honour the LORD with thy substance, and with the firstfruits of all thine increase.",r:"Proverbs 3:9"},
+  {t:"provision",v:"But my God shall supply all your need according to his riches in glory by Christ Jesus.",r:"Philippians 4:19",
+   d:"Need, measured against his supply rather than your shortfall."},
+  {t:"provision",v:"The LORD is my shepherd; I shall not want.",r:"Psalm 23:1",
+   d:"A shepherd's job is the sheep's provision. The claim rests on his role, not your effort."},
+  {t:"provision",v:"Seek ye first the kingdom of God, and his righteousness; and all these things shall be added unto you.",r:"Matthew 6:33",
+   d:"An order of operations. Most anxiety comes from reversing it."},
+  {t:"provision",v:"Every good gift and every perfect gift is from above.",r:"James 1:17",
+   d:"Worth remembering on a good week, when it's easiest to credit yourself."},
+  {t:"provision",v:"Honour the LORD with thy substance, and with the firstfruits of all thine increase.",r:"Proverbs 3:9",
+   d:"Firstfruits, not leftovers. What comes off the top reveals the priority."},
 
-  {t:"guidance",v:"Trust in the LORD with all thine heart; and lean not unto thine own understanding.",r:"Proverbs 3:5"},
-  {t:"guidance",v:"Thy word is a lamp unto my feet, and a light unto my path.",r:"Psalm 119:105"},
-  {t:"guidance",v:"Commit thy works unto the LORD, and thy thoughts shall be established.",r:"Proverbs 16:3"},
-  {t:"guidance",v:"A man's heart deviseth his way: but the LORD directeth his steps.",r:"Proverbs 16:9"},
-  {t:"guidance",v:"He shall baptize you with the Holy Ghost, and with fire.",r:"Matthew 3:11"},
-  {t:"guidance",v:"In all thy ways acknowledge him, and he shall direct thy paths.",r:"Proverbs 3:6"},
+  {t:"guidance",v:"Trust in the LORD with all thine heart; and lean not unto thine own understanding.",r:"Proverbs 3:5",
+   d:"Your understanding isn't dismissed — it's told not to carry the weight alone."},
+  {t:"guidance",v:"Thy word is a lamp unto my feet, and a light unto my path.",r:"Psalm 119:105",
+   d:"A lamp lights the next step, not the whole road. That is usually enough."},
+  {t:"guidance",v:"Commit thy works unto the LORD, and thy thoughts shall be established.",r:"Proverbs 16:3",
+   d:"Committing the work settles the thinking, in that order."},
+  {t:"guidance",v:"A man's heart deviseth his way: but the LORD directeth his steps.",r:"Proverbs 16:9",
+   d:"Plan honestly, hold it loosely. Both halves are in the verse."},
+  {t:"guidance",v:"He shall baptize you with the Holy Ghost, and with fire.",r:"Matthew 3:11",
+   d:"Fire refines and it consumes. Both are named as gift here."},
+  {t:"guidance",v:"In all thy ways acknowledge him, and he shall direct thy paths.",r:"Proverbs 3:6",
+   d:"All thy ways — including the ordinary ones nobody sees."},
 ];
 const TOPICS=["all","strength","patience","discipline","peace","provision","guidance"];
-let topic="all", lastVerse=-1;
+let topic="all", lastRef="";
 
 $("bChips").innerHTML=TOPICS.map(t=>
   `<button class="chip${t==="all"?" on":""}" data-t="${t}">${t}</button>`).join("");
@@ -1332,24 +1612,31 @@ $("bChips").querySelectorAll(".chip").forEach(c=>c.addEventListener("click",()=>
   $("bChips").querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x===c));
   nextVerse();
 }));
-
 function nextVerse(){
   const pool=VERSES.filter(v=>topic==="all"||v.t===topic);
   let i=Math.floor(Math.random()*pool.length);
-  if(pool.length>1 && pool[i].r===lastVerse) i=(i+1)%pool.length;   // don't repeat
-  lastVerse=pool[i].r;
+  if(pool.length>1&&pool[i].r===lastRef) i=(i+1)%pool.length;
+  lastRef=pool[i].r;
   $("bText").textContent=pool[i].v;
   $("bRef").textContent=pool[i].r;
+  $("bDevo").textContent=pool[i].d;
 }
 $("bNext").addEventListener("click",nextVerse);
 
-function homeVerse(){
-  const v=VERSES[Math.floor(Math.random()*VERSES.length)];
-  $("hVerse").textContent=v.v; $("hVerseRef").textContent=v.r;
+/* Same verse for everyone, all day — a shared reading rather than a shuffle. */
+function dailyVerse(){
+  const d=new Date();
+  const dayNum=Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/86400000);
+  const v=VERSES[dayNum%VERSES.length];
+  $("bDayK").textContent=d.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"});
+  $("bDayRef").textContent=v.r;
+  $("bDayText").textContent=v.v+" — "+v.d;
+  $("hVerse").textContent=v.v;
+  $("hVerseRef").textContent=v.r;
 }
 
 /* =======================================================================
-   SIGNAL FEED — behaviour unchanged
+   SIGNAL FEED
    ======================================================================= */
 const el={
   dot:$("dot"), feedState:$("feedState"), asset:$("asset"),
@@ -1364,21 +1651,19 @@ if(SUPABASE_URL.includes("YOUR-PROJECT")){
     '<div class="setup"><p><b style="color:#EEF3FF">Not configured yet.</b></p>'+
     '<p style="margin-top:12px">Open <code>index.html</code> and fill in '+
     '<code>SUPABASE_URL</code>, <code>SUPABASE_ANON</code> and '+
-    '<code>VAPID_PUBLIC</code> near the bottom of the file.</p></div>';
+    '<code>VAPID_PUBLIC</code> at the top of the script.</p></div>';
   throw new Error("unconfigured");
 }
 
 const { createClient }=await import("https://esm.sh/@supabase/supabase-js@2");
-const sb=createClient(SUPABASE_URL,SUPABASE_ANON,{realtime:{params:{eventsPerSecond:20}}});
+const sb=createClient(SUPABASE_URL,SUPABASE_ANON,{realtime:{params:{eventsPerSecond:30}}});
 
-let current=null, lastBeat=0, lastAsset="", skew=0;
-let channelState="closed", lastPull=0, samples=[];
+let current=null, lastBeat=0, lastAsset="", skew=0, lastSigAt=0;
+let channelState="closed", lastPull=0, samples=[], netOk=true, failStreak=0;
+let beatAt=0, beatRx=0, deskDown=false;
+const shown=new Set();
+const clockTime=(t)=>new Date(t*1000).toLocaleTimeString([], {hour12:false});
 
-/* Every timestamp the desk sends is on ITS clock. Phones disagree with it by
-   seconds to minutes. Each sample is inflated by transport delay and never
-   shortened by it, so the smallest sample is the closest to the true offset.
-   Measured from heartbeats as well as signals — otherwise a phone that has
-   not yet seen a trade reads the whole clock gap as "offline". */
 function noteClock(pcTime){
   if(!pcTime) return;
   samples.push(now()-Number(pcTime));
@@ -1386,87 +1671,55 @@ function noteClock(pcTime){
   skew=Math.min(...samples);
 }
 const noteSkew=(s)=>{ if(s&&s.sent_at) noteClock(s.sent_at); };
-
-/* The desk's clock, tracked directly. Heartbeats arrive every 8s carrying
-   beat_at on the PC's clock; pairing that with the moment it landed here
-   gives a running estimate of what time it is AT THE DESK right now.
-   Everything about signal timing is measured against this, not against the
-   phone's own clock, so transport delay is subtracted instead of added. */
-let beatAt=0, beatRx=0, lastSigAt=0;
-function serverNow(){
-  return beatAt ? beatAt + (now()-beatRx) : now()-skew;
-}
-
-/* Keys of signals already displayed this session. live_signal holds the last
-   signal indefinitely, so without this the next poll re-shows a trade that
-   already finished — a signal the tool is no longer giving. */
-const shown=new Set();
-/* Where this signal began on THIS phone's timeline: however long ago the
-   desk sent it, measured on the desk's clock. */
-function anchorOf(s){
-  if(!s||!s.sent_at) return now();
-  const age=serverNow()-Number(s.sent_at);
-  return now()-Math.max(0,age);
-}
+function serverNow(){ return beatAt ? beatAt+(now()-beatRx) : now()-skew; }
 const endsAt=(s,at)=> at+Number(s.entry_in||0)+Number(s.trade_seconds||0);
-const clockTime=(t)=>new Date(t*1000).toLocaleTimeString([], {hour12:false});
 const setPhase=(v)=>document.documentElement.style.setProperty("--phase",`var(${v})`);
 const setDrain=(f)=>document.documentElement.style.setProperty("--drain",
   Math.min(100,Math.max(0,f*100)).toFixed(1)+"%");
 
 function show(sig,anchor){
-  const at = anchor===undefined ? anchorOf(sig) : anchor;
+  const at = anchor===undefined ? now() : anchor;
   if(now()>=endsAt(sig,at)) return;
   const dir=String(sig.direction||"").toUpperCase();
   current={...sig,_anchor:at,_entryAt:at+Number(sig.entry_in||0),_expiresAt:endsAt(sig,at)};
-
-  el.call.textContent=dir;
+  lastSigAt=now();
+  if(sig.signal_key){
+    shown.add(sig.signal_key);
+    if(shown.size>200) shown.delete(shown.values().next().value);
+  }
   el.reason.textContent=sig.reason||"";
   el.fConf.textContent=Math.round((sig.confidence||0)*100)+"%";
   el.fGrade.textContent=sig.grade||"—";
   el.fFrame.textContent=sig.timeframe||"—";
   el.fTrade.textContent=sig.trade_seconds?Math.round(sig.trade_seconds)+"s":"—";
   if(sig.asset){ lastAsset=sig.asset; el.asset.textContent=sig.asset; }
-
-  lastSigAt=now();
-  if(sig.signal_key){
-    shown.add(sig.signal_key);
-    if(shown.size>200) shown.delete(shown.values().next().value);
-  }
-
   el.idle.hidden=true; el.live.hidden=false; el.facts.hidden=false;
   document.documentElement.style.setProperty("--dir",
     `var(${dir==="BUY"?"--rise":dir==="SELL"?"--fall":"--brand"})`);
   save(); tick(); paintHome();
 }
-
 function clear(){
   current=null;
   el.live.hidden=true; el.facts.hidden=true; el.idle.hidden=false;
   el.call.classList.remove("call--now");
   setDrain(1); setPhase("--brand"); paintHome();
 }
-
 function tick(){
   if(!current) return;
   const t=now();
   const { _entryAt:entry,_expiresAt:expiry,_anchor:anchor }=current;
   const dir=String(current.direction||"").toUpperCase();
-
   if(t<entry){
     el.eyebrow.textContent="Enter in";
-    el.call.textContent=dir;
-    el.call.classList.remove("call--now");
+    el.call.textContent=dir; el.call.classList.remove("call--now");
     el.clockNum.textContent=Math.max(1,Math.ceil(entry-t));
-    setPhase("--brand");
-    setDrain((t-anchor)/Math.max(entry-anchor,1));
+    setPhase("--brand"); setDrain((t-anchor)/Math.max(entry-anchor,1));
     el.at.textContent="Entry at "+clockTime(entry);
     return;
   }
   if(t<expiry){
     el.eyebrow.textContent="Expires in";
-    el.call.textContent=dir+" NOW";
-    el.call.classList.add("call--now");
+    el.call.textContent=dir+" NOW"; el.call.classList.add("call--now");
     el.clockNum.textContent=Math.max(1,Math.ceil(expiry-t));
     setPhase(dir==="BUY"?"--rise":dir==="SELL"?"--fall":"--brand");
     setDrain((t-entry)/Math.max(expiry-entry,1));
@@ -1474,10 +1727,8 @@ function tick(){
     return;
   }
   el.eyebrow.textContent="Trade finished";
-  el.at.textContent="Closed at "+clockTime(expiry);
-  el.call.textContent=dir;
-  el.call.classList.remove("call--now");
-  el.clockNum.textContent="0";
+  el.call.textContent=dir; el.call.classList.remove("call--now");
+  el.clockNum.textContent="0"; el.at.textContent="Closed at "+clockTime(expiry);
   setPhase("--brand"); setDrain(1); forget();
   if(!current._ending){
     current._ending=true;
@@ -1495,47 +1746,47 @@ function restore(){
   try{
     const {sig,at}=JSON.parse(raw);
     if(sig&&now()<endsAt(sig,at)) show(sig,at); else forget();
-    // A refresh mid-trade re-shows it; anything finished is dropped, not
-    // resurrected on the next poll.
   }catch{ forget(); }
 }
+
+const agoText=(s)=> s<10?"moments ago": s<60?Math.round(s)+"s ago"
+  : s<3600?Math.round(s/60)+"m ago" : Math.round(s/3600)+"h ago";
 
 function paintFeed(){
   const age=now()-skew-lastBeat;
   let label,note;
 
-  if(!lastBeat){
-    // Nothing known yet. Distinguish "still asking" from "this phone can't
-    // reach the server" — neither one means the desk is down.
+  if(deskDown){
+    // The desk told us it was shutting down. No need to wait for a timeout.
+    el.dot.className="dot stale";
+    label="Desk offline";
+    note="The desk signed off. Signals resume when it's running again.";
+  } else if(!lastBeat){
     el.dot.className="dot";
-    label = netOk ? "Connecting" : "No connection";
+    label = netOk ? "Connecting" : "Reconnecting";
     note  = netOk ? "Checking in with the desk."
-                  : "This device can't reach the server. The desk may still be running.";
-  } else if(age<45){
+                  : "Still trying to reach the server. The desk may be running.";
+  } else if(age<7){
+    // Beats arrive every 2s, so 7s is three missed in a row.
     el.dot.className="dot live";
-    label="Live";
-    note="The desk is running and reporting in.";
+    label="Live"; note="The desk is running and reporting in.";
+  } else if(age<25){
+    el.dot.className="dot stale";
+    label="Reconnecting";
+    note = netOk ? "No check-in for a few seconds." : "This device lost its connection. Retrying.";
   } else {
     el.dot.className="dot stale";
     const m=Math.floor(age/60);
-    label = m<1 ? "Reconnecting" : `Offline ${m}m`;
-    note = netOk
-      ? "No check-in from the desk. Signals are paused until it's back."
-      : "This device lost its connection. Retrying.";
+    label = m<1 ? "Offline" : `Offline ${m}m`;
+    note = netOk ? "No check-in from the desk. Signals are paused until it's back."
+                 : "This device lost its connection. Retrying.";
   }
-
   el.feedState.textContent=label;
   $("hStatus").textContent=label;
   $("hNote").textContent=note;
-  $("hLast").textContent = lastBeat ? agoText(now()-skew-lastBeat) : "—";
+  $("hLast").textContent = lastBeat ? agoText(Math.max(0,now()-skew-lastBeat)) : "—";
 }
-
-const agoText=(s)=> s<10 ? "moments ago"
-  : s<60 ? Math.round(s)+"s ago"
-  : s<3600 ? Math.round(s/60)+"m ago"
-  : Math.round(s/3600)+"h ago";
-
-setInterval(paintFeed,1000);
+setInterval(paintFeed,500);
 
 function paintHome(){
   $("hAsset").textContent=lastAsset||"—";
@@ -1546,9 +1797,10 @@ setInterval(paintHome,5000);
 
 function applyBeat(row){
   if(!row) return;
+  deskDown=false;                       // a beat proves it's back
   noteClock(row.beat_at);
   const b=Number(row.beat_at||0);
-  if(b>beatAt){ beatAt=b; beatRx=now(); }   // only ever move forward
+  if(b>beatAt){ beatAt=b; beatRx=now(); }
   lastBeat=b;
   if(row.asset&&row.asset!==lastAsset){
     lastAsset=row.asset; el.asset.textContent=row.asset;
@@ -1556,86 +1808,65 @@ function applyBeat(row){
   }
   paintFeed(); paintHome();
 }
-
 function applySignal(sig){
   if(!sig||!sig.sent_at) return;
-
-  // Already displayed once. Never show the same trade twice — this is what
-  // stops a finished signal reappearing on the next poll.
-  if(sig.signal_key && shown.has(sig.signal_key)) return;
-
-  // Belongs to a pair the tool has moved on from.
+  if(sig.signal_key&&shown.has(sig.signal_key)) return;
   if(lastAsset&&sig.asset&&sig.asset!==lastAsset) return;
-
   const total=Number(sig.entry_in||0)+Number(sig.trade_seconds||0);
   const age=serverNow()-Number(sig.sent_at);
-
-  // Sent in the future, or already over. Either way the tool is not showing
-  // it, so neither do we. The 2s tolerance covers ordinary clock jitter.
-  if(age<-2 || age>=total) return;
-
+  if(age<-2||age>=total) return;
   show(sig, now()-Math.max(0,age));
 }
+function applyOffline(){
+  deskDown=true;
+  if(current){ forget(); clear(); }
+  paintFeed();
+}
 
-let channel=null,lastRebuild=0;
-
-let netOk=true;
-
+async function readRow(table){
+  const res=await sb.from(table).select("*").eq("id",1).limit(1);
+  if(res.error) throw res.error;
+  return res.data&&res.data[0] ? res.data[0] : null;
+}
 async function pullState(){
   lastPull=now();
-
-  // Settled independently. These were fetched with Promise.all, so a failure
-  // on live_signal threw away a perfectly good feed_status result — and that
-  // device then sat on "Connecting" forever while the desk was running.
-  const [beat,live]=await Promise.allSettled([
-    sb.from("feed_status").select("*").eq("id",1).maybeSingle(),
-    sb.from("live_signal").select("*").eq("id",1).maybeSingle(),
-  ]);
-
-  netOk = beat.status==="fulfilled" && !beat.value?.error;
-  if(netOk && beat.value?.data) applyBeat(beat.value.data);
-  if(live.status==="fulfilled" && live.value?.data) applySignal(live.value.data);
-
+  const [beat,live]=await Promise.allSettled([readRow("feed_status"),readRow("live_signal")]);
+  if(beat.status==="fulfilled"){
+    failStreak=0; netOk=true;
+    if(beat.value) applyBeat(beat.value);
+  }else{
+    failStreak++;
+    if(failStreak>=3&&navigator.onLine===false) netOk=false;
+    else if(failStreak>=5) netOk=false;
+    console.warn("feed_status read failed:",beat.reason);
+  }
+  if(live.status==="fulfilled"&&live.value) applySignal(live.value);
   paintFeed();
   return netOk;
 }
 
+let channel=null,lastRebuild=0;
 function connect(){
-  lastRebuild=now();
-  channelState="connecting";
+  lastRebuild=now(); channelState="connecting";
   if(channel){ try{ sb.removeChannel(channel); }catch{} }
   channel=sb.channel("star-trader")
     .on("broadcast",{event:"signal"},({payload})=>{ noteSkew(payload); applySignal(payload); })
     .on("broadcast",{event:"heartbeat"},({payload})=>applyBeat(payload))
+    .on("broadcast",{event:"offline"},()=>applyOffline())
     .on("postgres_changes",{event:"*",schema:"public",table:"feed_status"},({new:r})=>applyBeat(r))
     .on("postgres_changes",{event:"*",schema:"public",table:"live_signal"},({new:r})=>applySignal(r))
     .subscribe((s)=>{ channelState=s; if(s==="SUBSCRIBED") pullState(); });
 }
-
-/* Rebuild a dead socket. This runs even when no beat has EVER arrived —
-   previously a phone that failed its first connection was never retried, so
-   it sat on "Connecting" forever. */
 setInterval(()=>{
   const age=now()-skew-lastBeat;
-  const stale = !lastBeat || age>25;
-  if(stale && now()-lastRebuild>15) connect();
+  if((!lastBeat||age>25)&&now()-lastRebuild>15) connect();
 },5000);
-
-/* Plain HTTP fallback. Some mobile carriers and corporate Wi-Fi drop
-   WebSockets outright; those users would show offline forever while the desk
-   ran fine. Polling the same two rows keeps status and live trades correct
-   without a socket. It idles while the socket is healthy and beats are
-   arriving, so it costs nothing in the normal case. */
 setInterval(()=>{
   const age=now()-skew-lastBeat;
-  const healthy = channelState==="SUBSCRIBED" && lastBeat && age<20;
-  // Retry briskly whenever the picture is stale — before the first beat, or
-  // after one goes missing. Back off only while things look healthy, where
-  // the socket is doing the work anyway.
-  const gap = (!lastBeat || age>20) ? 3 : 9;
-  if(!healthy && now()-lastPull>gap) pullState();
+  const healthy = channelState==="SUBSCRIBED"&&lastBeat&&age<20;
+  const gap=(!lastBeat||age>20)?3:9;
+  if(!healthy&&now()-lastPull>gap) pullState();
 },2500);
-
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState!=="visible") return;
   pullState();
@@ -1649,20 +1880,18 @@ addEventListener("pageshow",pullState);
    ======================================================================= */
 const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
-
 function b64ToBytes(b64){
   const pad="=".repeat((4-(b64.length%4))%4);
   const raw=atob((b64+pad).replace(/-/g,"+").replace(/_/g,"/"));
   return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
-
 async function refreshButton(){
   if(!("serviceWorker" in navigator)||!("PushManager" in window)){
     el.enable.hidden=true; el.hint.hidden=false;
     el.hint.innerHTML = isIOS&&!standalone
       ? 'Tap <b>Share</b>, then <b>Add to Home Screen</b> to get alerts on your lock screen.'
       : "This browser can't deliver alerts. Signals still appear here while the app is open.";
-    $("aState").textContent = isIOS&&!standalone ? "Needs install" : "Unavailable";
+    $("aState").textContent = isIOS&&!standalone?"Needs install":"Unavailable";
     $("aNote").textContent = isIOS&&!standalone
       ? "Apple only allows lock-screen alerts for apps added to the home screen."
       : "Keep this page open to see signals as they fire.";
@@ -1682,7 +1911,6 @@ async function refreshButton(){
     $("aNote").textContent="Signals only appear while this app is open.";
   }
 }
-
 el.enable.addEventListener("click",async()=>{
   const reg=await navigator.serviceWorker.ready;
   const existing=await reg.pushManager.getSubscription();
@@ -1697,13 +1925,11 @@ el.enable.addEventListener("click",async()=>{
     return;
   }
   const sub=await reg.pushManager.subscribe({
-    userVisibleOnly:true, applicationServerKey:b64ToBytes(VAPID_PUBLIC),
-  });
+    userVisibleOnly:true, applicationServerKey:b64ToBytes(VAPID_PUBLIC) });
   const raw=sub.toJSON();
   const { error }=await sb.from("push_subscriptions").insert({
     endpoint:raw.endpoint,p256dh:raw.keys.p256dh,auth:raw.keys.auth,
-    label:navigator.userAgent.slice(0,60),
-  });
+    label:navigator.userAgent.slice(0,60) });
   if(error&&error.code!=="23505"){
     el.hint.hidden=false;
     el.hint.textContent="Couldn't register this device. Check your connection and try again.";
@@ -1711,7 +1937,6 @@ el.enable.addEventListener("click",async()=>{
   }
   refreshButton();
 });
-
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("./sw.js").then(refreshButton).catch(()=>{});
 } else refreshButton();
@@ -1719,15 +1944,18 @@ if("serviceWorker" in navigator){
 /* ===================================================================== */
 $("jDate").value=iso(new Date());
 loadSim(); loadJournal();
-paintSessions(); homeVerse(); nextVerse();
+paintSessions(); dailyVerse(); nextVerse();
 calcRisk(); drawPattern(); drawSim(); paintJournal();
 clear(); restore();
-pullState(); connect();   // status first, socket second — a refresh shows Live at once
+pullState(); connect();
 route();
-addEventListener("resize",()=>{ if(location.hash.includes("patterns")) drawPattern();
-  if(location.hash.includes("sim")) drawSim();
-  if(location.hash.includes("risk")) calcRisk();
-  if(location.hash.includes("journal")) paintJournal(); });
+addEventListener("resize",()=>{
+  const r=location.hash.replace("#/","");
+  if(r==="patterns") drawPattern();
+  if(r==="sim") drawSim();
+  if(r==="risk") calcRisk();
+  if(r==="journal") paintJournal();
+});
 </script>
 </body>
 </html>
