@@ -319,6 +319,20 @@ input.f:focus{outline:none;border-color:var(--flame)}
 
 a.card{display:block;color:inherit}
 
+.deskrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--edge);
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.deskrow b{font-weight:500;color:var(--text);text-transform:none;letter-spacing:0;font-size:12.5px}
+
+.at{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:14px}
+
+.spark{width:100%;height:54px;display:block;margin:14px 0 4px;border:1px solid var(--edge);
+  border-radius:3px;background:color-mix(in srgb,var(--panel) 70%,transparent)}
+.rel{display:flex;align-items:center;gap:9px;margin-top:10px}
+.rel__bar{flex:1;height:5px;border-radius:3px;background:var(--edge);overflow:hidden}
+.rel__fill{height:100%;background:var(--flame)}
+.rel__n{font-size:11px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -339,7 +353,6 @@ a.card{display:block;color:inherit}
       <div class="nav__sub">
         <a href="#/risk" data-route="risk">Risk calculator</a>
         <a href="#/sessions" data-route="sessions">Session clock</a>
-        <a href="#/sim" data-route="sim">Trade simulator</a>
       </div>
     </div>
 
@@ -348,6 +361,7 @@ a.card{display:block;color:inherit}
       <div class="nav__sub">
         <a href="#/patterns" data-route="patterns">Candle patterns</a>
         <a href="#/basics" data-route="basics">Trading basics</a>
+        <a href="#/sim" data-route="sim">Trade simulator</a>
       </div>
     </div>
 
@@ -382,6 +396,12 @@ a.card{display:block;color:inherit}
         <div class="card__k">Feed status</div>
         <div class="card__v" id="hStatus">Connecting</div>
         <div class="card__note" id="hNote">Checking in with the desk.</div>
+        <div class="deskrow">
+          <span>Last check-in</span><b id="hLast">—</b>
+        </div>
+        <div class="deskrow">
+          <span>Last signal</span><b id="hLastSig">None yet</b>
+        </div>
       </div>
 
       <div class="grid2">
@@ -427,6 +447,7 @@ a.card{display:block;color:inherit}
         <p class="clock"><span id="clockNum">0</span><span class="clock__unit">s</span></p>
         <p class="call" id="call"></p>
         <p class="reason" id="reason"></p>
+        <p class="at" id="at"></p>
       </div>
 
       <section class="facts" id="facts" hidden>
@@ -502,6 +523,15 @@ a.card{display:block;color:inherit}
         <div class="card__note" id="patMean" style="margin-top:0"></div>
       </div>
 
+      <div class="card">
+        <div class="card__k">How much weight to give it</div>
+        <div class="rel">
+          <div class="rel__bar"><div class="rel__fill" id="patRelFill"></div></div>
+          <span class="rel__n" id="patRelN">—</span>
+        </div>
+        <div class="card__note" id="patRelWhy"></div>
+      </div>
+
       <div class="card" style="border-color:color-mix(in srgb,var(--fall) 35%,var(--edge))">
         <div class="card__k" style="color:var(--fall)">Where it fails</div>
         <div class="card__note" id="patFail" style="margin-top:0"></div>
@@ -531,12 +561,15 @@ a.card{display:block;color:inherit}
       <p class="pd">Read the last candles and call the next one. Nothing at stake but your average.</p>
 
       <canvas id="simCanvas" class="candles"></canvas>
+      <canvas id="simSpark" class="spark"></canvas>
 
       <div class="out" style="margin-bottom:14px">
         <div><div class="k">Balance</div><div class="v" id="simBal">—</div></div>
         <div><div class="k">Win rate</div><div class="v" id="simWR">—</div></div>
         <div><div class="k">Record</div><div class="v" id="simRec">0–0</div></div>
         <div><div class="k">Streak</div><div class="v" id="simStreak">—</div></div>
+        <div><div class="k">Best run</div><div class="v" id="simBest">—</div></div>
+        <div><div class="k">Vs break-even</div><div class="v" id="simEdge">—</div></div>
       </div>
 
       <p class="simmsg" id="simMsg">Call the next candle.</p>
@@ -638,9 +671,9 @@ a.card{display:block;color:inherit}
 /* =======================================================================
    CONFIG — replace these three values, then deploy.
    ======================================================================= */
-const SUPABASE_URL  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bGhhd2Jkdm5xbGVkZ3BwZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMDEwMDYsImV4cCI6MjEwMTc3NzAwNn0.KZNdJqlLOkNytaX2e-NfdDakvqYs9zyxlmEbgZdr69Q";
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
 const SUPABASE_ANON = "YOUR-ANON-KEY";
-const VAPID_PUBLIC  = "BM83ph4iJnym10fZCKXkWGmQfg1T4_Ip92T0S80NPrDDkdTRrbiiw0g1KgldkYP9Uoldv_TF1UAWQS2MkZaFmYE";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
 /* ===================================================================== */
 
 const $ = (id) => document.getElementById(id);
@@ -739,8 +772,8 @@ const numv = (id) => parseFloat($(id).value) || 0;
    ROUTER
    ======================================================================= */
 const ROUTES = ["home","signals","risk","sessions","patterns","basics","sim","journal","bible","alerts"];
-const TOOLS  = ["risk","sessions","sim"];
-const LEARN  = ["patterns","basics"];
+const TOOLS  = ["risk","sessions"];
+const LEARN  = ["patterns","basics","sim"];
 const menu=$("menu"), scrim=$("scrim");
 const closeMenu=()=>{ menu.classList.remove("open"); scrim.classList.remove("open"); };
 
@@ -954,9 +987,24 @@ const PATTERNS=[
     mean:"Volatility contracting. The market is coiling, and the break of the outside candle's range usually sets direction.",
     fail:"Direction is unknown until the break. Guessing the way out of an inside bar is a coin flip." },
 ];
+const REL={
+  "Bullish engulfing":[70,"Strong when the engulfing body is large and it lands at a level that already mattered."],
+  "Bearish engulfing":[70,"Same logic inverted. Needs something overhead for the rejection to mean anything."],
+  "Hammer":[60,"Depends almost entirely on what it is rejecting. In open space it is close to noise."],
+  "Shooting star":[60,"Reliable at extremes, unreliable in a range where every push gets sold."],
+  "Doji":[35,"On its own it says only that the candle was undecided. Context carries it."],
+  "Morning star":[75,"Three candles telling one story is harder to fake than one candle."],
+  "Three white soldiers":[55,"Real trend strength, but often appears near the end of a run rather than the start."],
+  "Inside bar":[45,"Says compression, not direction. Guessing the break is a coin flip."],
+};
 let patIdx=0;
 function drawPattern(){
   const p=PATTERNS[patIdx];
+  const [score,why]=REL[p.name]||[50,""];
+  $("patRelFill").style.width=score+"%";
+  $("patRelFill").style.background = score>=65?"var(--rise)":score>=45?"#FFC24B":"var(--fall)";
+  $("patRelN").textContent=score>=65?"High":score>=45?"Moderate":"Low";
+  $("patRelWhy").textContent=why;
   drawCandles($("patCanvas"), p.candles, { height:220 });
   $("patKind").textContent=p.kind;
   $("patName").textContent=p.name;
@@ -988,11 +1036,12 @@ $("lessons").innerHTML=LESSONS.map((l,i)=>`
    SIMULATOR
    ======================================================================= */
 const SIM_KEY="star.sim";
-let sim={ bal:1000, wins:0, losses:0, streak:0, best:0, candles:[] };
+let sim={ bal:1000, wins:0, losses:0, streak:0, best:0, candles:[], equity:[1000] };
 
 function loadSim(){
   try{ const r=localStorage.getItem(SIM_KEY); if(r) sim={...sim,...JSON.parse(r)}; }catch{}
   if(!sim.candles || sim.candles.length<12) sim.candles=genCandles(18);
+  if(!Array.isArray(sim.equity)||!sim.equity.length) sim.equity=[sim.bal];
 }
 const saveSim=()=>{ try{ localStorage.setItem(SIM_KEY, JSON.stringify(sim)); }catch{} };
 
@@ -1017,10 +1066,35 @@ function genCandles(n, from){
 function drawSim(){
   drawCandles($("simCanvas"), sim.candles.slice(-16), { height:220, markLast:true });
   const n=sim.wins+sim.losses;
+  const wr = n ? sim.wins/n : 0;
   $("simBal").textContent=money(sim.bal);
-  $("simWR").textContent = n ? Math.round(sim.wins/n*100)+"%" : "—";
+  $("simWR").textContent = n ? Math.round(wr*100)+"%" : "—";
   $("simRec").textContent=`${sim.wins}–${sim.losses}`;
   $("simStreak").textContent = sim.streak>0 ? `${sim.streak} W` : sim.streak<0 ? `${-sim.streak} L` : "—";
+  $("simBest").textContent = sim.best>0 ? `${sim.best} W` : "—";
+
+  // 80% payout needs 55.6% accuracy to break even — the number that matters.
+  const be=100/1.8;
+  const d=n ? wr*100-be : 0;
+  $("simEdge").textContent = n ? (d>=0?"+":"")+d.toFixed(1)+"%" : "—";
+  $("simEdge").style.color = !n ? "var(--text)" : d>=0 ? "var(--rise)" : "var(--fall)";
+
+  drawSpark();
+}
+
+function drawSpark(){
+  const cv=$("simSpark"); const { ctx,w,h }=fitCanvas(cv,54);
+  ctx.clearRect(0,0,w,h);
+  const s=sim.equity;
+  if(s.length<2){ ctx.fillStyle="#6D7A96"; ctx.font="10px IBM Plex Mono, monospace";
+    ctx.textAlign="center"; ctx.fillText("Your equity curve builds as you call candles", w/2, h/2+3); return; }
+  const hi=Math.max(...s), lo=Math.min(...s), r=(hi-lo)||1, pad=6;
+  const x=(i)=>pad+i/(s.length-1)*(w-pad*2);
+  const y=(v)=>pad+(hi-v)/r*(h-pad*2);
+  const up=s[s.length-1]>=s[0];
+  ctx.beginPath(); ctx.moveTo(x(0),y(s[0]));
+  s.forEach((v,i)=>ctx.lineTo(x(i),y(v)));
+  ctx.strokeStyle=up?"#34E5A0":"#FF3D6E"; ctx.lineWidth=1.8; ctx.stroke();
 }
 
 function callIt(dir){
@@ -1036,6 +1110,8 @@ function callIt(dir){
   if(won){ sim.bal+=stake*0.8; sim.wins++; sim.streak=sim.streak>=0?sim.streak+1:1; }
   else   { sim.bal-=stake;     sim.losses++; sim.streak=sim.streak<=0?sim.streak-1:-1; }
   if(sim.streak>sim.best) sim.best=sim.streak;
+  sim.equity.push(sim.bal);
+  if(sim.equity.length>120) sim.equity=sim.equity.slice(-120);
 
   const msg=$("simMsg");
   msg.className="simmsg "+(won?"good":"bad");
@@ -1048,7 +1124,7 @@ function callIt(dir){
 $("simUp").addEventListener("click",()=>callIt("BUY"));
 $("simDown").addEventListener("click",()=>callIt("SELL"));
 $("simReset").addEventListener("click",()=>{
-  sim={bal:1000,wins:0,losses:0,streak:0,best:0,candles:genCandles(18)};
+  sim={bal:1000,wins:0,losses:0,streak:0,best:0,candles:genCandles(18),equity:[1000]};
   saveSim(); drawSim();
   $("simMsg").className="simmsg"; $("simMsg").textContent="Reset. Call the next candle.";
 });
@@ -1278,7 +1354,7 @@ function homeVerse(){
 const el={
   dot:$("dot"), feedState:$("feedState"), asset:$("asset"),
   idle:$("idle"), live:$("live"), eyebrow:$("eyebrow"), call:$("call"),
-  clockNum:$("clockNum"), reason:$("reason"), facts:$("facts"),
+  clockNum:$("clockNum"), reason:$("reason"), facts:$("facts"), at:$("at"),
   fConf:$("fConf"), fGrade:$("fGrade"), fFrame:$("fFrame"), fTrade:$("fTrade"),
   enable:$("enable"), hint:$("hint"),
 };
@@ -1316,7 +1392,7 @@ const noteSkew=(s)=>{ if(s&&s.sent_at) noteClock(s.sent_at); };
    gives a running estimate of what time it is AT THE DESK right now.
    Everything about signal timing is measured against this, not against the
    phone's own clock, so transport delay is subtracted instead of added. */
-let beatAt=0, beatRx=0;
+let beatAt=0, beatRx=0, lastSigAt=0;
 function serverNow(){
   return beatAt ? beatAt + (now()-beatRx) : now()-skew;
 }
@@ -1333,6 +1409,7 @@ function anchorOf(s){
   return now()-Math.max(0,age);
 }
 const endsAt=(s,at)=> at+Number(s.entry_in||0)+Number(s.trade_seconds||0);
+const clockTime=(t)=>new Date(t*1000).toLocaleTimeString([], {hour12:false});
 const setPhase=(v)=>document.documentElement.style.setProperty("--phase",`var(${v})`);
 const setDrain=(f)=>document.documentElement.style.setProperty("--drain",
   Math.min(100,Math.max(0,f*100)).toFixed(1)+"%");
@@ -1351,6 +1428,7 @@ function show(sig,anchor){
   el.fTrade.textContent=sig.trade_seconds?Math.round(sig.trade_seconds)+"s":"—";
   if(sig.asset){ lastAsset=sig.asset; el.asset.textContent=sig.asset; }
 
+  lastSigAt=now();
   if(sig.signal_key){
     shown.add(sig.signal_key);
     if(shown.size>200) shown.delete(shown.values().next().value);
@@ -1382,6 +1460,7 @@ function tick(){
     el.clockNum.textContent=Math.max(1,Math.ceil(entry-t));
     setPhase("--brand");
     setDrain((t-anchor)/Math.max(entry-anchor,1));
+    el.at.textContent="Entry at "+clockTime(entry);
     return;
   }
   if(t<expiry){
@@ -1391,9 +1470,11 @@ function tick(){
     el.clockNum.textContent=Math.max(1,Math.ceil(expiry-t));
     setPhase(dir==="BUY"?"--rise":dir==="SELL"?"--fall":"--brand");
     setDrain((t-entry)/Math.max(expiry-entry,1));
+    el.at.textContent="Closes at "+clockTime(expiry);
     return;
   }
   el.eyebrow.textContent="Trade finished";
+  el.at.textContent="Closed at "+clockTime(expiry);
   el.call.textContent=dir;
   el.call.classList.remove("call--now");
   el.clockNum.textContent="0";
@@ -1421,27 +1502,47 @@ function restore(){
 
 function paintFeed(){
   const age=now()-skew-lastBeat;
-  let label;
-  if(!lastBeat){ el.dot.className="dot"; label="Connecting"; }
-  else if(age<45){ el.dot.className="dot live"; label="Live"; }
-  else{
+  let label,note;
+
+  if(!lastBeat){
+    // Nothing known yet. Distinguish "still asking" from "this phone can't
+    // reach the server" — neither one means the desk is down.
+    el.dot.className="dot";
+    label = netOk ? "Connecting" : "No connection";
+    note  = netOk ? "Checking in with the desk."
+                  : "This device can't reach the server. The desk may still be running.";
+  } else if(age<45){
+    el.dot.className="dot live";
+    label="Live";
+    note="The desk is running and reporting in.";
+  } else {
     el.dot.className="dot stale";
     const m=Math.floor(age/60);
     label = m<1 ? "Reconnecting" : `Offline ${m}m`;
+    note = netOk
+      ? "No check-in from the desk. Signals are paused until it's back."
+      : "This device lost its connection. Retrying.";
   }
+
   el.feedState.textContent=label;
   $("hStatus").textContent=label;
-  $("hNote").textContent =
-    label==="Live" ? "The desk is running and reporting in."
-    : label==="Connecting" ? "Checking in with the desk."
-    : "No check-in from the desk. Signals are paused until it's back.";
+  $("hNote").textContent=note;
+  $("hLast").textContent = lastBeat ? agoText(now()-skew-lastBeat) : "—";
 }
+
+const agoText=(s)=> s<10 ? "moments ago"
+  : s<60 ? Math.round(s)+"s ago"
+  : s<3600 ? Math.round(s/60)+"m ago"
+  : Math.round(s/3600)+"h ago";
+
 setInterval(paintFeed,1000);
 
 function paintHome(){
   $("hAsset").textContent=lastAsset||"—";
   $("hSignal").textContent = current ? `${String(current.direction||"").toUpperCase()} live` : "Quiet";
+  $("hLastSig").textContent = lastSigAt ? agoText(now()-lastSigAt) : "None yet";
 }
+setInterval(paintHome,5000);
 
 function applyBeat(row){
   if(!row) return;
@@ -1478,17 +1579,25 @@ function applySignal(sig){
 
 let channel=null,lastRebuild=0;
 
+let netOk=true;
+
 async function pullState(){
   lastPull=now();
-  try{
-    const [beat,live]=await Promise.all([
-      sb.from("feed_status").select("*").eq("id",1).maybeSingle(),
-      sb.from("live_signal").select("*").eq("id",1).maybeSingle(),
-    ]);
-    applyBeat(beat.data);
-    if(live.data) applySignal(live.data);
-    return true;
-  }catch{ return false; }
+
+  // Settled independently. These were fetched with Promise.all, so a failure
+  // on live_signal threw away a perfectly good feed_status result — and that
+  // device then sat on "Connecting" forever while the desk was running.
+  const [beat,live]=await Promise.allSettled([
+    sb.from("feed_status").select("*").eq("id",1).maybeSingle(),
+    sb.from("live_signal").select("*").eq("id",1).maybeSingle(),
+  ]);
+
+  netOk = beat.status==="fulfilled" && !beat.value?.error;
+  if(netOk && beat.value?.data) applyBeat(beat.value.data);
+  if(live.status==="fulfilled" && live.value?.data) applySignal(live.value.data);
+
+  paintFeed();
+  return netOk;
 }
 
 function connect(){
@@ -1520,8 +1629,12 @@ setInterval(()=>{
 setInterval(()=>{
   const age=now()-skew-lastBeat;
   const healthy = channelState==="SUBSCRIBED" && lastBeat && age<20;
-  if(!healthy && now()-lastPull>9) pullState();
-},4000);
+  // Retry briskly whenever the picture is stale — before the first beat, or
+  // after one goes missing. Back off only while things look healthy, where
+  // the socket is doing the work anyway.
+  const gap = (!lastBeat || age>20) ? 3 : 9;
+  if(!healthy && now()-lastPull>gap) pullState();
+},2500);
 
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState!=="visible") return;
