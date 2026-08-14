@@ -802,9 +802,9 @@ input.f:focus{outline:none;border-color:var(--flame)}
 /* =======================================================================
    CONFIG
    ======================================================================= */
-const SUPABASE_URL  = "https://iwlhawbdvnqledgppeyw.supabase.co";
-const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml3bGhhd2Jkdm5xbGVkZ3BwZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYyMDEwMDYsImV4cCI6MjEwMTc3NzAwNn0.KZNdJqlLOkNytaX2e-NfdDakvqYs9zyxlmEbgZdr69Q";
-const VAPID_PUBLIC  = "BM83ph4iJnym10fZCKXkWGmQfg1T4_Ip92T0S80NPrDDkdTRrbiiw0g1KgldkYP9Uoldv_TF1UAWQS2MkZaFmYE";
+const SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON = "YOUR-ANON-KEY";
+const VAPID_PUBLIC  = "YOUR-VAPID-PUBLIC-KEY";
 
 /* Zoom rooms. Leave a link empty and its button shows as unavailable
    instead of opening a dead page. */
@@ -1670,13 +1670,11 @@ const sb=createClient(SUPABASE_URL,SUPABASE_ANON,{realtime:{params:{eventsPerSec
 
 let current=null, lastBeat=0, lastAsset="", skew=0, lastSigAt=0;
 let channelState="closed", lastPull=0, samples=[], netOk=true, failStreak=0, lastErr="";
+let lastSocketAt=0;   // last message actually delivered over the websocket
+let storedSamples=[];
 let beatAt=0, beatRx=0, deskDown=false, haveClock=false;
 const shown=new Set();
 const clockTime=(t)=>new Date(t*1000).toLocaleTimeString([], {hour12:false});
-
-/* Desk-write interval for the stored heartbeat row. Must match
-   DB_HEARTBEAT_EVERY in push.py — a stored beat is on average half this old. */
-const DB_BEAT_EVERY = 5;
 
 /* Two kinds of clock sample, and mixing them ruins the estimate.
    LIVE  — arrived over the socket just now, so the only error is transport.
@@ -1687,21 +1685,26 @@ function noteClock(pcTime, stored){
   if(!pcTime) return;
   const raw=now()-Number(pcTime);
 
+  // Two pools, kept apart because mixing them would ruin the estimate.
+  //   LIVE   — arrived over the socket, so the only error is transport.
+  //   STORED — read from a table, so it is anywhere from brand new to one
+  //            desk write interval out of date.
+  // Both are only ever inflated, never shrunk: transport delay and row
+  // staleness each push a sample upward. So the MINIMUM of a pool is the best
+  // estimate, and both converge downward as more samples arrive. Live wins
+  // when available; stored carries the whole app when Realtime is down.
   if(stored){
-    if(samples.length) return;                 // a live sample already beats this
-    skew = raw - DB_BEAT_EVERY/2;              // centre the error instead of
-    haveClock = true;                          // always running one way
-    return;
+    storedSamples.push(raw);
+    if(storedSamples.length>25) storedSamples.shift();
+  }else{
+    samples.push(raw);
+    if(samples.length>20) samples.shift();
   }
-
-  samples.push(raw);
   haveClock = true;
-  if(samples.length>20) samples.shift();
-  // Transport delay only ever inflates a sample, so the smallest is closest
-  // to the true offset between the two clocks.
-  const next=Math.min(...samples);
-  const moved=Math.abs(next-skew);
-  skew=next;
+
+  const next = samples.length ? Math.min(...samples) : Math.min(...storedSamples);
+  const moved = Math.abs(next-skew);
+  skew = next;
   // A better estimate means the running countdown was anchored with a worse
   // one. Re-anchor rather than let that error sit there for the whole trade.
   if(moved>0.25&&current&&current._sentAt) reanchor();
@@ -1854,7 +1857,10 @@ function paintDiag(){
   $("dNote").textContent = ok
     ? "Reads are succeeding. Anything wrong is upstream of the server."
     : (lastErr || "No detail returned.");
-  $("dSock").textContent = channelState;
+  const alive=socketAlive();
+  $("dSock").textContent = alive ? "delivering"
+    : channelState==="SUBSCRIBED" ? "subscribed, silent — polling instead"
+    : channelState;
   $("dPull").textContent = lastPull ? agoText(now()-lastPull) : "never";
 }
 setInterval(paintDiag,2000);
@@ -1934,24 +1940,35 @@ let channel=null,lastRebuild=0;
 function connect(){
   lastRebuild=now(); channelState="connecting";
   if(channel){ try{ sb.removeChannel(channel); }catch{} }
+  const fromSocket=(fn)=>(arg)=>{ lastSocketAt=now(); fn(arg); };
   channel=sb.channel("star-trader")
-    .on("broadcast",{event:"signal"},({payload})=>applySignal(payload))
-    .on("broadcast",{event:"heartbeat"},({payload})=>applyBeat(payload))
-    .on("broadcast",{event:"offline"},()=>applyOffline())
-    .on("postgres_changes",{event:"*",schema:"public",table:"feed_status"},({new:r})=>applyBeat(r))
-    .on("postgres_changes",{event:"*",schema:"public",table:"live_signal"},({new:r})=>applySignal(r))
+    .on("broadcast",{event:"signal"},fromSocket(({payload})=>applySignal(payload)))
+    .on("broadcast",{event:"heartbeat"},fromSocket(({payload})=>applyBeat(payload)))
+    .on("broadcast",{event:"offline"},fromSocket(()=>applyOffline()))
+    .on("postgres_changes",{event:"*",schema:"public",table:"feed_status"},fromSocket(({new:r})=>applyBeat(r)))
+    .on("postgres_changes",{event:"*",schema:"public",table:"live_signal"},fromSocket(({new:r})=>applySignal(r)))
     .subscribe((s)=>{ channelState=s; if(s==="SUBSCRIBED") pullState(); });
 }
 setInterval(()=>{
-  const age=now()-skew-lastBeat;
-  if((!lastBeat||age>25)&&now()-lastRebuild>15) connect();
+  if(!socketAlive()&&now()-lastRebuild>20) connect();
 },5000);
+/* A subscribed channel that delivers nothing is not a working channel.
+   Judging health by "do we have a recent heartbeat" was circular: polling
+   supplied the heartbeat, so polling declared itself healthy and backed off
+   to roughly every 20s — wide enough to miss most 30-second signal windows
+   whenever Realtime was down. Health is now measured on socket deliveries
+   only, and when the socket is silent the app runs entirely over REST. */
+function socketAlive(){
+  return channelState==="SUBSCRIBED" && lastSocketAt && (now()-lastSocketAt)<15;
+}
 setInterval(()=>{
-  const age=now()-skew-lastBeat;
-  const healthy = channelState==="SUBSCRIBED"&&lastBeat&&age<20;
-  const gap=(!lastBeat||age>20)?3:9;
-  if(!healthy&&now()-lastPull>gap) pullState();
-},2500);
+  const alive=socketAlive();
+  // 2s while the socket is silent: fast enough that a 30s window can't slip
+  // past unseen. 9s once the socket is carrying traffic, where it costs
+  // nothing to be lazy.
+  const gap = alive ? 9 : 2;
+  if(now()-lastPull>gap) pullState();
+},1000);
 document.addEventListener("visibilitychange",()=>{
   if(document.visibilityState!=="visible") return;
   pullState();
